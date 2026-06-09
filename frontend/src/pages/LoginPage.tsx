@@ -92,12 +92,12 @@ export default function LoginPage() {
           </div>
           <div>
             <h1 className="text-4xl font-bold leading-tight mb-4">
-              구성원의 성장을<br />돕는 통합 플랫폼
+              나를 이해하고<br />성장을 설계하는 공간
             </h1>
             <p className="text-brand-100 text-base leading-relaxed max-w-md mb-7">
-              LabManager는 평가나 감시를 위한 도구가 아닙니다.
-              구성원이 자신을 이해하고, 스스로 성장을 설계하도록 돕는
-              모듈형 HR 워크스페이스입니다.
+              LabManager는 구성원 한 사람 한 사람이 자신의 강점을 발견하고,
+              스스로 성장의 방향을 그려가도록 돕는 모듈형 워크스페이스입니다.
+              기록과 리포트는 온전히 당신의 것입니다.
             </p>
             <div className="space-y-2.5 max-w-md">
               <div className="flex items-center gap-3 text-sm">
