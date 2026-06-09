@@ -55,6 +55,7 @@ export const updateReportVisibility = (id: number, is_public: boolean) =>
 export const getWorkcraftMeta = () => api.get('/workcraft/meta').then((r) => r.data)
 
 export const listFrictions = () => api.get('/workcraft/frictions').then((r) => r.data)
+export const listSharedFrictions = () => api.get('/workcraft/frictions/shared').then((r) => r.data)
 export const createFriction = (data: any) => api.post('/workcraft/frictions', data).then((r) => r.data)
 export const updateFriction = (id: number, data: any) =>
   api.put(`/workcraft/frictions/${id}`, data).then((r) => r.data)

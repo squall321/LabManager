@@ -3,7 +3,7 @@ import { useAuthStore } from '../../store/authStore'
 import {
   LayoutDashboard, ClipboardList, FileBarChart, Users,
   Settings, LogOut, FlaskConical, Lightbulb, Target,
-  KanbanSquare,
+  KanbanSquare, Share2, CalendarDays,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
@@ -15,9 +15,11 @@ const birkmanNav = [
 ]
 
 const workcraftNav = [
-  { to: '/workcraft/frictions',   label: '업무 불편함',   icon: Lightbulb },
-  { to: '/workcraft/missions/new', label: '미션 만들기',   icon: Target },
-  { to: '/workcraft/board',        label: '내 미션 보드',  icon: KanbanSquare },
+  { to: '/workcraft/frictions',      label: '업무 불편함',   icon: Lightbulb },
+  { to: '/workcraft/team-frictions', label: '공유 불편함',   icon: Share2 },
+  { to: '/workcraft/missions/new',   label: '미션 만들기',   icon: Target },
+  { to: '/workcraft/board',          label: '내 미션 보드',  icon: KanbanSquare },
+  { to: '/workcraft/calendar',       label: '캘린더',        icon: CalendarDays },
 ]
 
 const modules = [

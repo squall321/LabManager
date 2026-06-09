@@ -9,7 +9,7 @@ from ..models.workcraft import WorkFriction, GrowthMission, ClaudePrompt
 from ..schemas.workcraft import (
     WorkFrictionCreate, WorkFrictionUpdate, WorkFrictionResponse,
     GrowthMissionCreate, GrowthMissionUpdate, GrowthMissionResponse,
-    ClaudePromptResponse, RecommendationResponse,
+    ClaudePromptResponse, RecommendationResponse, SharedFrictionResponse,
     VISIBILITY_VALUES, MISSION_STATUS_VALUES,
 )
 from ..services.prompt_builder import build_prompt
@@ -48,6 +48,38 @@ def list_frictions(current_user: User = Depends(get_current_user), db: Session =
         .order_by(WorkFriction.created_at.desc())
         .all()
     )
+
+
+@router.get("/frictions/shared", response_model=List[SharedFrictionResponse])
+def list_shared_frictions(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """다른 사람이 명시적으로 공유한 불편함만 노출 (team_public=실명, anonymous_template=익명)."""
+    rows = (
+        db.query(WorkFriction, User)
+        .join(User, WorkFriction.user_id == User.id)
+        .filter(
+            WorkFriction.user_id != current_user.id,
+            WorkFriction.visibility.in_(["team_public", "anonymous_template"]),
+        )
+        .order_by(WorkFriction.created_at.desc())
+        .all()
+    )
+    out = []
+    for friction, owner in rows:
+        anon = friction.visibility == "anonymous_template"
+        out.append(SharedFrictionResponse(
+            id=friction.id,
+            owner_name="익명" if anon else owner.name,
+            department=None if anon else owner.department,
+            title=friction.title,
+            description=friction.description or "",
+            friction_type=friction.friction_type,
+            frequency=friction.frequency or "",
+            related_skill=friction.related_skill or "",
+            claude_feasible=friction.claude_feasible,
+            visibility=friction.visibility,
+            created_at=friction.created_at,
+        ))
+    return out
 
 
 @router.post("/frictions", response_model=WorkFrictionResponse)
@@ -123,9 +155,17 @@ def create_mission(
     _validate_visibility(data.visibility)
     if data.status not in MISSION_STATUS_VALUES:
         raise HTTPException(status_code=400, detail="유효하지 않은 상태입니다")
-    # work_friction_id가 있으면 본인 소유인지 확인
+    # 본인 불편함과 연결한 경우 소유 확인
     if data.work_friction_id is not None:
         _get_own_friction(data.work_friction_id, current_user, db)
+    # 타인의 공유 불편함에서 출발한 경우, 실제로 공유된 것인지 확인 (비공개 역추적 방지)
+    if data.origin_friction_id is not None:
+        origin = db.query(WorkFriction).filter(
+            WorkFriction.id == data.origin_friction_id,
+            WorkFriction.visibility.in_(["team_public", "anonymous_template"]),
+        ).first()
+        if not origin:
+            raise HTTPException(status_code=404, detail="공유된 불편함을 찾을 수 없습니다")
     mission = GrowthMission(user_id=current_user.id, **data.model_dump())
     db.add(mission)
     db.commit()

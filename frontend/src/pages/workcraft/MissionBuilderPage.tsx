@@ -12,17 +12,24 @@ export default function MissionBuilderPage() {
   const location = useLocation()
   const queryClient = useQueryClient()
   const friction = (location.state as any)?.friction as WorkFriction | undefined
+  const sharedFriction = (location.state as any)?.sharedFriction as
+    | { id: number; title: string; description: string; related_skill: string; owner_name: string }
+    | undefined
 
+  const seed = friction ?? sharedFriction
   const [form, setForm] = useState({
-    title: friction ? `${friction.title} 개선` : '',
-    problem: friction?.description || '',
+    title: seed ? `${seed.title} 개선` : '',
+    problem: (friction?.description || sharedFriction?.description) ?? '',
     goal: '',
     output: '',
     scope: '',
     success_criteria: '',
-    deadline: '2주',
-    learning_goal: friction?.related_skill || '',
+    deadline: '',
+    learning_goal: (friction?.related_skill || sharedFriction?.related_skill) ?? '',
+    start_date: '',
+    due_date: '',
     work_friction_id: friction?.id ?? null,
+    origin_friction_id: sharedFriction?.id ?? null,
     status: 'idea' as const,
     visibility: 'private' as Visibility,
   })
@@ -56,6 +63,15 @@ export default function MissionBuilderPage() {
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Form */}
         <div className="lg:col-span-2 card space-y-4">
+          {sharedFriction && (
+            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-brand-50 border border-brand-100">
+              <Sparkles className="w-4 h-4 text-brand-600 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-brand-800">
+                <b>{sharedFriction.owner_name}</b>님이 공유한 불편함에서 시작합니다.
+                동료의 문제를 함께 풀어보는 미션이에요.
+              </p>
+            </div>
+          )}
           <div>
             <label className="label">미션 제목 *</label>
             <input className="input-field mt-1.5" value={form.title}
@@ -86,9 +102,21 @@ export default function MissionBuilderPage() {
           </div>
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <label className="label">기한</label>
+              <label className="label">시작일</label>
+              <input type="date" className="input-field mt-1.5" value={form.start_date}
+                onChange={(e) => set('start_date', e.target.value)} />
+            </div>
+            <div>
+              <label className="label">마감일</label>
+              <input type="date" className="input-field mt-1.5" value={form.due_date}
+                onChange={(e) => set('due_date', e.target.value)} />
+            </div>
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="label">기한 메모</label>
               <input className="input-field mt-1.5" value={form.deadline}
-                onChange={(e) => set('deadline', e.target.value)} placeholder="2주" />
+                onChange={(e) => set('deadline', e.target.value)} placeholder="예: 약 2주" />
             </div>
             <div>
               <label className="label">배우고 싶은 역량</label>

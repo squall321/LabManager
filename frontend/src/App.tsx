@@ -8,8 +8,10 @@ import ReportPage from './pages/ReportPage'
 import TeamPage from './pages/TeamPage'
 import AdminPage from './pages/AdminPage'
 import FrictionsPage from './pages/workcraft/FrictionsPage'
+import TeamFrictionsPage from './pages/workcraft/TeamFrictionsPage'
 import MissionBuilderPage from './pages/workcraft/MissionBuilderPage'
 import ActionBoardPage from './pages/workcraft/ActionBoardPage'
+import CalendarPage from './pages/workcraft/CalendarPage'
 import PromptStudioPage from './pages/workcraft/PromptStudioPage'
 
 function ProtectedRoute({ children, adminOnly = false }: { children: JSX.Element; adminOnly?: boolean }) {
@@ -40,8 +42,10 @@ export default function App() {
           {/* WorkCraft Studio */}
           <Route path="/workcraft" element={<FrictionsPage />} />
           <Route path="/workcraft/frictions" element={<FrictionsPage />} />
+          <Route path="/workcraft/team-frictions" element={<TeamFrictionsPage />} />
           <Route path="/workcraft/missions/new" element={<MissionBuilderPage />} />
           <Route path="/workcraft/board" element={<ActionBoardPage />} />
+          <Route path="/workcraft/calendar" element={<CalendarPage />} />
           <Route path="/workcraft/missions/:missionId/prompt" element={<PromptStudioPage />} />
 
           <Route

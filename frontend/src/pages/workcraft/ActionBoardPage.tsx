@@ -1,19 +1,21 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import {
-  KanbanSquare, Loader2, Plus, Sparkles, FileCode2, ChevronRight, Lock,
+  KanbanSquare, Loader2, Plus, Sparkles, FileCode2, ChevronRight, Lock, GripVertical, CalendarClock,
 } from 'lucide-react'
 import { listMissions, updateMission } from '../../services/api'
 import type { GrowthMission, MissionStatus } from '../../types'
+import { cn } from '../../lib/utils'
 
-const COLUMNS: { key: MissionStatus; label: string; hint: string; color: string }[] = [
-  { key: 'idea',         label: 'Idea',        hint: '아이디어',        color: '#94a3b8' },
-  { key: 'prompt_ready', label: 'Prompt Ready', hint: '명세서 준비',     color: '#6366f1' },
-  { key: 'in_progress',  label: 'In Progress',  hint: 'Claude 작업 중',  color: '#3b82f6' },
-  { key: 'review',       label: 'Review',       hint: '검토',            color: '#f59e0b' },
-  { key: 'done',         label: 'Done',         hint: '완성',            color: '#22c55e' },
-  { key: 'shared',       label: 'Shared',       hint: '공유 완료',       color: '#8b5cf6' },
+const COLUMNS: { key: MissionStatus; label: string; color: string }[] = [
+  { key: 'idea',         label: 'Idea',         color: '#94a3b8' },
+  { key: 'prompt_ready', label: 'Prompt Ready', color: '#6366f1' },
+  { key: 'in_progress',  label: 'In Progress',  color: '#3b82f6' },
+  { key: 'review',       label: 'Review',       color: '#f59e0b' },
+  { key: 'done',         label: 'Done',         color: '#22c55e' },
+  { key: 'shared',       label: 'Shared',       color: '#8b5cf6' },
 ]
 
 const NEXT: Record<MissionStatus, MissionStatus | null> = {
@@ -24,6 +26,8 @@ const NEXT: Record<MissionStatus, MissionStatus | null> = {
 export default function ActionBoardPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const [dragId, setDragId] = useState<number | null>(null)
+  const [overCol, setOverCol] = useState<MissionStatus | null>(null)
 
   const { data: missions, isLoading } = useQuery<GrowthMission[]>({
     queryKey: ['missions'], queryFn: listMissions,
@@ -31,8 +35,27 @@ export default function ActionBoardPage() {
 
   const moveMut = useMutation({
     mutationFn: ({ id, status }: { id: number; status: MissionStatus }) => updateMission(id, { status }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['missions'] }),
+    // 낙관적 업데이트로 드래그 후 즉시 반영
+    onMutate: async ({ id, status }) => {
+      await queryClient.cancelQueries({ queryKey: ['missions'] })
+      const prev = queryClient.getQueryData<GrowthMission[]>(['missions'])
+      queryClient.setQueryData<GrowthMission[]>(['missions'], (old) =>
+        (old ?? []).map((m) => (m.id === id ? { ...m, status } : m))
+      )
+      return { prev }
+    },
+    onError: (_e, _v, ctx) => ctx?.prev && queryClient.setQueryData(['missions'], ctx.prev),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['missions'] }),
   })
+
+  const onDrop = (status: MissionStatus) => {
+    if (dragId != null) {
+      const m = missions?.find((x) => x.id === dragId)
+      if (m && m.status !== status) moveMut.mutate({ id: dragId, status })
+    }
+    setDragId(null)
+    setOverCol(null)
+  }
 
   return (
     <div className="space-y-6">
@@ -46,7 +69,7 @@ export default function ActionBoardPage() {
             <KanbanSquare className="w-6 h-6 text-brand-500" /> 내 미션 보드
           </h1>
           <p className="text-slate-500 mt-1 flex items-center gap-1.5">
-            <Lock className="w-3.5 h-3.5" /> 이 보드는 본인만 볼 수 있습니다.
+            <Lock className="w-3.5 h-3.5" /> 본인만 볼 수 있어요 · 카드를 끌어다 단계를 옮기세요.
           </p>
         </div>
         <button onClick={() => navigate('/workcraft/missions/new')} className="btn-primary">
@@ -68,8 +91,18 @@ export default function ActionBoardPage() {
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
           {COLUMNS.map((col) => {
             const items = missions.filter((m) => m.status === col.key)
+            const isOver = overCol === col.key
             return (
-              <div key={col.key} className="bg-slate-100/60 rounded-2xl p-2.5 min-h-[120px]">
+              <div
+                key={col.key}
+                onDragOver={(e) => { e.preventDefault(); setOverCol(col.key) }}
+                onDragLeave={() => setOverCol((c) => (c === col.key ? null : c))}
+                onDrop={() => onDrop(col.key)}
+                className={cn(
+                  'rounded-2xl p-2.5 min-h-[140px] transition-colors',
+                  isOver ? 'bg-brand-100/70 ring-2 ring-brand-300' : 'bg-slate-100/60'
+                )}
+              >
                 <div className="flex items-center gap-1.5 px-1.5 py-1 mb-2">
                   <span className="w-2 h-2 rounded-full" style={{ backgroundColor: col.color }} />
                   <span className="text-sm font-semibold text-slate-700">{col.label}</span>
@@ -79,18 +112,33 @@ export default function ActionBoardPage() {
                   {items.map((m) => {
                     const next = NEXT[m.status]
                     return (
-                      <motion.div key={m.id} layout initial={{ opacity: 0, scale: 0.96 }}
-                        animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-xl p-3 shadow-sm border border-slate-100">
-                        <h4 className="text-sm font-semibold text-slate-800 leading-snug mb-2 line-clamp-3">{m.title}</h4>
-                        <div className="flex items-center gap-1.5">
+                      <motion.div
+                        key={m.id}
+                        layout
+                        draggable
+                        onDragStart={() => setDragId(m.id)}
+                        onDragEnd={() => { setDragId(null); setOverCol(null) }}
+                        initial={{ opacity: 0, scale: 0.96 }}
+                        animate={{ opacity: dragId === m.id ? 0.4 : 1, scale: 1 }}
+                        className="bg-white rounded-xl p-2.5 shadow-sm border border-slate-100 cursor-grab active:cursor-grabbing"
+                      >
+                        <div className="flex items-start gap-1">
+                          <GripVertical className="w-3.5 h-3.5 text-slate-300 mt-0.5 flex-shrink-0" />
+                          <h4 className="text-sm font-semibold text-slate-800 leading-snug line-clamp-3 flex-1">{m.title}</h4>
+                        </div>
+                        {m.due_date && (
+                          <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-1.5 pl-4">
+                            <CalendarClock className="w-3 h-3" /> {m.due_date}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1.5 mt-2">
                           <button onClick={() => navigate(`/workcraft/missions/${m.id}/prompt`)}
                             className="flex-1 inline-flex items-center justify-center gap-1 text-[11px] font-medium text-brand-600 bg-brand-50 hover:bg-brand-100 rounded-lg py-1.5 transition-colors">
                             <FileCode2 className="w-3 h-3" /> 명세서
                           </button>
                           {next && (
                             <button onClick={() => moveMut.mutate({ id: m.id, status: next })}
-                              disabled={moveMut.isPending}
-                              title={`→ ${next}`}
+                              title={`다음 단계로`}
                               className="inline-flex items-center justify-center text-slate-400 hover:text-brand-600 bg-slate-50 hover:bg-slate-100 rounded-lg p-1.5 transition-colors">
                               <ChevronRight className="w-3.5 h-3.5" />
                             </button>

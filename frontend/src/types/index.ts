@@ -117,6 +117,7 @@ export interface GrowthMission {
   id: number
   user_id: number
   work_friction_id: number | null
+  origin_friction_id: number | null
   title: string
   problem: string
   goal: string
@@ -125,10 +126,26 @@ export interface GrowthMission {
   success_criteria: string
   deadline: string
   learning_goal: string
+  start_date: string
+  due_date: string
   status: MissionStatus
   visibility: Visibility
   created_at: string
   updated_at: string
+}
+
+export interface SharedFriction {
+  id: number
+  owner_name: string
+  department: string | null
+  title: string
+  description: string
+  friction_type: string
+  frequency: string
+  related_skill: string
+  claude_feasible: boolean
+  visibility: Visibility
+  created_at: string
 }
 
 export interface ClaudePrompt {

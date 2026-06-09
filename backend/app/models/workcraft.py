@@ -57,6 +57,9 @@ class GrowthMission(Base):
     success_criteria = Column(Text, default="")
     deadline = Column(String, default="")
     learning_goal = Column(String, default="")
+    start_date = Column(String, default="")   # ISO "YYYY-MM-DD"
+    due_date = Column(String, default="")      # ISO "YYYY-MM-DD"
+    origin_friction_id = Column(Integer, nullable=True)  # 타인의 공유 불편함에서 출발한 경우 출처
     status = Column(String, default=MissionStatus.idea.value)
     visibility = Column(String, default=Visibility.private.value)
     created_at = Column(DateTime, default=datetime.utcnow)

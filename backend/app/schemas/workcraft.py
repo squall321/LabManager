@@ -53,7 +53,10 @@ class GrowthMissionBase(BaseModel):
     success_criteria: str = ""
     deadline: str = ""
     learning_goal: str = ""
+    start_date: str = ""
+    due_date: str = ""
     work_friction_id: Optional[int] = None
+    origin_friction_id: Optional[int] = None
     status: str = "idea"
     visibility: str = "private"
 
@@ -71,6 +74,8 @@ class GrowthMissionUpdate(BaseModel):
     success_criteria: Optional[str] = None
     deadline: Optional[str] = None
     learning_goal: Optional[str] = None
+    start_date: Optional[str] = None
+    due_date: Optional[str] = None
     status: Optional[str] = None
     visibility: Optional[str] = None
 
@@ -83,6 +88,21 @@ class GrowthMissionResponse(GrowthMissionBase):
 
     class Config:
         from_attributes = True
+
+
+# ── Shared Friction (타인이 공유한 불편함) ──
+class SharedFrictionResponse(BaseModel):
+    id: int
+    owner_name: str           # team_public이면 실명, anonymous_template이면 "익명"
+    department: Optional[str] = None
+    title: str
+    description: str
+    friction_type: str
+    frequency: str
+    related_skill: str
+    claude_feasible: bool
+    visibility: str
+    created_at: datetime
 
 
 # ── Claude Prompt ──
