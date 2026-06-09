@@ -51,6 +51,30 @@ export const getAllReports = () => api.get('/reports/all').then((r) => r.data)
 export const updateReportVisibility = (id: number, is_public: boolean) =>
   api.patch(`/reports/${id}/visibility`, { is_public }).then((r) => r.data)
 
+// WorkCraft
+export const getWorkcraftMeta = () => api.get('/workcraft/meta').then((r) => r.data)
+
+export const listFrictions = () => api.get('/workcraft/frictions').then((r) => r.data)
+export const createFriction = (data: any) => api.post('/workcraft/frictions', data).then((r) => r.data)
+export const updateFriction = (id: number, data: any) =>
+  api.put(`/workcraft/frictions/${id}`, data).then((r) => r.data)
+export const deleteFriction = (id: number) =>
+  api.delete(`/workcraft/frictions/${id}`).then((r) => r.data)
+
+export const listMissions = () => api.get('/workcraft/missions').then((r) => r.data)
+export const createMission = (data: any) => api.post('/workcraft/missions', data).then((r) => r.data)
+export const updateMission = (id: number, data: any) =>
+  api.put(`/workcraft/missions/${id}`, data).then((r) => r.data)
+export const deleteMission = (id: number) =>
+  api.delete(`/workcraft/missions/${id}`).then((r) => r.data)
+
+export const generateMissionPrompt = (missionId: number) =>
+  api.post(`/workcraft/missions/${missionId}/prompt/generate`).then((r) => r.data)
+export const getMissionPrompt = (missionId: number) =>
+  api.get(`/workcraft/missions/${missionId}/prompt`).then((r) => r.data)
+
+export const getRecommendations = () => api.get('/workcraft/recommendations').then((r) => r.data)
+
 // Admin
 export const getAdminStats = () => api.get('/admin/stats').then((r) => r.data)
 export const getAdminUsers = () => api.get('/admin/users').then((r) => r.data)

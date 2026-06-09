@@ -7,6 +7,10 @@ import SurveyPage from './pages/SurveyPage'
 import ReportPage from './pages/ReportPage'
 import TeamPage from './pages/TeamPage'
 import AdminPage from './pages/AdminPage'
+import FrictionsPage from './pages/workcraft/FrictionsPage'
+import MissionBuilderPage from './pages/workcraft/MissionBuilderPage'
+import ActionBoardPage from './pages/workcraft/ActionBoardPage'
+import PromptStudioPage from './pages/workcraft/PromptStudioPage'
 
 function ProtectedRoute({ children, adminOnly = false }: { children: JSX.Element; adminOnly?: boolean }) {
   const { token, user } = useAuthStore()
@@ -32,6 +36,14 @@ export default function App() {
           <Route path="/report" element={<ReportPage />} />
           <Route path="/report/:userId" element={<ReportPage />} />
           <Route path="/team" element={<TeamPage />} />
+
+          {/* WorkCraft Studio */}
+          <Route path="/workcraft" element={<FrictionsPage />} />
+          <Route path="/workcraft/frictions" element={<FrictionsPage />} />
+          <Route path="/workcraft/missions/new" element={<MissionBuilderPage />} />
+          <Route path="/workcraft/board" element={<ActionBoardPage />} />
+          <Route path="/workcraft/missions/:missionId/prompt" element={<PromptStudioPage />} />
+
           <Route
             path="/admin"
             element={

@@ -12,9 +12,13 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=True)
     is_admin = Column(Boolean, default=False)
+    is_part_leader = Column(Boolean, default=False)  # WorkCraft 파트장 (admin과 독립 축)
+    department = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
     password_set = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     surveys = relationship("Survey", back_populates="user")
     report = relationship("BirkmanReport", back_populates="user", uselist=False)
+    work_frictions = relationship("WorkFriction", back_populates="user", cascade="all, delete-orphan")
+    growth_missions = relationship("GrowthMission", back_populates="user", cascade="all, delete-orphan")

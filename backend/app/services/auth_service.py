@@ -22,11 +22,19 @@ def load_users_from_yaml(db: Session) -> int:
                 name=user_data["name"],
                 email=user_data["email"],
                 is_admin=user_data.get("is_admin", False),
+                is_part_leader=user_data.get("is_part_leader", False),
+                department=user_data.get("department"),
                 is_active=True,
                 password_set=False,
             )
             db.add(user)
             created += 1
+        else:
+            # 기존 계정의 권한/부서 정보는 YAML 기준으로 동기화 (비번/활성상태는 유지)
+            existing.is_admin = user_data.get("is_admin", existing.is_admin)
+            existing.is_part_leader = user_data.get("is_part_leader", existing.is_part_leader)
+            if user_data.get("department") is not None:
+                existing.department = user_data["department"]
 
     db.commit()
     return created

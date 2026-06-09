@@ -26,6 +26,8 @@ class UserLogin(BaseModel):
 class UserResponse(UserBase):
     id: int
     is_admin: bool
+    is_part_leader: bool = False
+    department: Optional[str] = None
     is_active: bool
     password_set: bool
     created_at: datetime

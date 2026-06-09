@@ -3,6 +3,8 @@ export interface User {
   name: string
   email: string
   is_admin: boolean
+  is_part_leader: boolean
+  department: string | null
   is_active: boolean
   password_set: boolean
   created_at: string
@@ -91,3 +93,68 @@ export interface SurveyStatus {
 }
 
 export type BirkmanColor = 'red' | 'yellow' | 'green' | 'blue'
+
+// ── WorkCraft Studio ──
+export type Visibility = 'private' | 'leader_only' | 'team_public' | 'anonymous_template'
+export type MissionStatus = 'idea' | 'prompt_ready' | 'in_progress' | 'review' | 'done' | 'shared'
+
+export interface WorkFriction {
+  id: number
+  user_id: number
+  title: string
+  description: string
+  friction_type: string
+  frequency: string
+  expected_effect: string
+  related_skill: string
+  claude_feasible: boolean
+  visibility: Visibility
+  created_at: string
+  updated_at: string
+}
+
+export interface GrowthMission {
+  id: number
+  user_id: number
+  work_friction_id: number | null
+  title: string
+  problem: string
+  goal: string
+  output: string
+  scope: string
+  success_criteria: string
+  deadline: string
+  learning_goal: string
+  status: MissionStatus
+  visibility: Visibility
+  created_at: string
+  updated_at: string
+}
+
+export interface ClaudePrompt {
+  id: number
+  mission_id: number
+  prompt_text: string
+  prompt_type: string
+  created_at: string
+}
+
+export interface RecommendationItem {
+  title: string
+  reason: string
+}
+
+export interface Recommendation {
+  has_birkman: boolean
+  color_name: string | null
+  color_keyword: string | null
+  tone: string | null
+  skill_tags: string[]
+  mission_ideas: RecommendationItem[]
+}
+
+export interface WorkCraftMeta {
+  friction_types: string[]
+  visibility_values: Visibility[]
+  mission_statuses: MissionStatus[]
+}

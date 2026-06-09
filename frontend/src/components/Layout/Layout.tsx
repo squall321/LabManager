@@ -1,21 +1,37 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import {
-  LayoutDashboard, ClipboardList, FileBarChart,
-  Users, Settings, LogOut, FlaskConical,
+  LayoutDashboard, ClipboardList, FileBarChart, Users,
+  Settings, LogOut, FlaskConical, Lightbulb, Target,
+  KanbanSquare,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
-const navItems = [
+const birkmanNav = [
   { to: '/',       label: '대시보드',   icon: LayoutDashboard },
   { to: '/survey', label: '버크만 설문', icon: ClipboardList },
   { to: '/report', label: '내 리포트',   icon: FileBarChart },
   { to: '/team',   label: '팀 리포트',   icon: Users },
 ]
 
+const workcraftNav = [
+  { to: '/workcraft/frictions',   label: '업무 불편함',   icon: Lightbulb },
+  { to: '/workcraft/missions/new', label: '미션 만들기',   icon: Target },
+  { to: '/workcraft/board',        label: '내 미션 보드',  icon: KanbanSquare },
+]
+
+const modules = [
+  { key: 'birkman',   label: 'Birkman Workshop', home: '/',                    short: 'BW' },
+  { key: 'workcraft', label: 'WorkCraft Studio',  home: '/workcraft/frictions', short: 'WS' },
+]
+
 export function Layout() {
   const { user, clearAuth } = useAuthStore()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  const activeModule = location.pathname.startsWith('/workcraft') ? 'workcraft' : 'birkman'
+  const nav = activeModule === 'workcraft' ? workcraftNav : birkmanNav
 
   const handleLogout = () => {
     clearAuth()
@@ -24,7 +40,6 @@ export function Layout() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
-      {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-slate-200 flex flex-col fixed h-screen">
         <div className="px-6 py-5 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
@@ -33,13 +48,42 @@ export function Layout() {
             </div>
             <div>
               <div className="font-bold text-slate-900 leading-tight">LabManager</div>
-              <div className="text-[11px] text-slate-400 font-medium">HR Platform</div>
+              <div className="text-[11px] text-slate-400 font-medium">People &amp; Growth</div>
             </div>
           </div>
         </div>
 
+        {/* Module switcher */}
+        <div className="px-3 pt-3">
+          <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 rounded-xl">
+            {modules.map((m) => (
+              <button
+                key={m.key}
+                onClick={() => navigate(m.home)}
+                className={cn(
+                  'flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-all',
+                  activeModule === m.key
+                    ? 'bg-white text-brand-700 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                )}
+              >
+                <span className={cn(
+                  'w-4 h-4 rounded flex items-center justify-center text-[8px] font-bold',
+                  activeModule === m.key ? 'bg-brand-100 text-brand-700' : 'bg-slate-200 text-slate-500'
+                )}>{m.short}</span>
+                {m.key === 'birkman' ? 'Birkman' : 'WorkCraft'}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <nav className="flex-1 px-3 py-4 space-y-1">
-          {navItems.map((item) => (
+          <div className="pb-1 px-3">
+            <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              {activeModule === 'workcraft' ? 'WorkCraft Studio' : 'Birkman Workshop'}
+            </div>
+          </div>
+          {nav.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -88,7 +132,7 @@ export function Layout() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-semibold text-slate-900 truncate">{user?.name}</div>
-              <div className="text-[11px] text-slate-400 truncate">{user?.email}</div>
+              <div className="text-[11px] text-slate-400 truncate">{user?.department || user?.email}</div>
             </div>
           </div>
           <button onClick={handleLogout} className="btn-ghost w-full justify-start">
@@ -98,7 +142,6 @@ export function Layout() {
         </div>
       </aside>
 
-      {/* Main */}
       <main className="flex-1 ml-64">
         <div className="max-w-6xl mx-auto px-8 py-8">
           <Outlet />
