@@ -182,17 +182,18 @@ Acceptance Criteria / Test Plan / Do Not Modify / Implementation Steps
 기획서 §19 우선순위를 LabManager 구현 단위로 변환:
 
 ### Phase 1 — 개인 코어 (MVP 1순위)
-- [ ] `User` 모델 확장(department, is_part_leader) + YAML 필드
+- [ ] `User` 모델 확장(department, is_part_leader) + YAML 필드 + 동기화 반영
 - [ ] `models/workcraft.py` 6개 테이블 + 마이그레이션
-- [ ] 개인 CRUD API (frictions, missions) + `visibility` 강제
+- [ ] 개인 CRUD API (frictions, missions) + `visibility` 강제(기본 private)
 - [ ] `prompt_builder.py` + 프롬프트 생성 API
+- [ ] `recommendation.py` (본인 BirkmanReport 기반 미션/스킬 추천, 순수 함수)
 - [ ] 프론트 페이지 1·2·3·4 + 모듈 스위처
 - [ ] 공유 범위 셀렉터 컴포넌트(4단계)
 
 ### Phase 2 — 공유와 익명 집계 (2순위)
 - [ ] 공유 템플릿 라이브러리(페이지 5) + 익명화 로직
-- [ ] `trends_service.py` 익명 집계 + `get_current_part_leader`
-- [ ] 파트장 익명 대시보드(페이지 6, Recharts 재사용)
+- [ ] `trends_service.py` 익명 집계 + `ANONYMITY_MIN_N=5` 임계값 + `get_current_part_leader`
+- [ ] 파트장 익명 대시보드(페이지 6, Recharts 재사용) + "기여자 N/5" 진행 상태 UI
 - [ ] 지원 요청 등록
 
 ### Phase 3 — 회고·성장 (3순위)
@@ -221,12 +222,33 @@ Acceptance Criteria / Test Plan / Do Not Modify / Implementation Steps
 
 ---
 
-## 9. 결정이 필요한 열린 질문
+## 9. 결정된 설계 사항 (2026-06-10 확정)
 
-1. **파트장 권한 부여 방식** — YAML(`is_part_leader: true`)로 고정 vs 관리자가 UI에서 지정?
-2. **부서(department) 분리** — 익명 집계를 부서 단위로 쪼갤지, 전체 단일 집계로 둘지?
-3. **익명 임계값** — 집계 표본이 너무 적을 때(예: 3명 미만) 역추적 위험. 최소 N 미만이면 비표시 정책 필요.
-4. **Birkman 연계 깊이** — 성장 관심 영역을 Birkman 관심영역 점수와 연결할지(선택적 시너지).
+| # | 질문 | 결정 | 구현 함의 |
+|---|---|---|---|
+| 1 | 파트장 권한 부여 | **YAML 고정** (`is_part_leader: true`) | `users.yaml`에 필드 추가, 로그인 동기화 시 반영. UI 토글 없음 (admin과 독립 축) |
+| 2 | 집계 범위 | **전체 단일 집계** | `department`는 저장만 해두고(미래 대비) 집계는 파트 전체 1개로 |
+| 3 | 익명 최소 표본 | **N = 5** | 항목별 기여자 5명 미만이면 비표시. 파일럿(3~5명) 동안엔 대부분 가려질 수 있음 |
+| 4 | Birkman 연계 | **강한 연계 (미션 추천)** | WorkCraft가 본인 `BirkmanReport`를 읽어 색상 유형·상위 관심영역 기반으로 미션/스킬/템플릿 추천 |
+
+### 9.1 N=5 임계값과 파일럿의 긴장 (주의 설계)
+
+파일럿은 3~5명이라 N=5면 초기엔 대시보드 항목 대부분이 가려질 수 있다.
+이는 "개인이 역추적되지 않는다"는 신뢰 원칙을 사용량보다 우선한 **의도된 선택**이다.
+대시보드는 빈 화면 대신 다음처럼 동작한다.
+
+- 항목별로 `기여자 5명 이상일 때 공개됩니다 (현재 N/5)` 진행 표시 → 가린다는 사실 자체를 투명하게
+- 개인 역추적이 불가능한 **순수 총계**(예: 파트 전체 생성 미션 수)는 임계값 없이 노출
+- 표본이 쌓이면 자동 공개, 별도 조작 불필요
+- `trends_service.ANONYMITY_MIN_N = 5` 상수로 두어 조직 규모에 따라 추후 조정
+
+### 9.2 Birkman → 미션 추천 메커니즘 (강한 연계)
+
+- `services/recommendation.py`를 **순수 함수**로 두고 본인 `BirkmanReport.report_data`를 입력으로 받는다(테스트 용이).
+- **색상 유형별 추천 톤**: 빨강(행동가)→"빠른 결과가 보이는 자동화", 초록(소통가)→"협업·공유형 도구", 노랑(조직가)→"반복 정리·체계화 자동화", 파랑(기획가)→"구조 설계·분석형 미션".
+- **상위 관심영역**(예: 과학/기술, 수리/분석)에 맞는 스킬 태그·템플릿을 우선 노출.
+- 추천은 **본인 화면(미션 만들기·템플릿 라이브러리)에서만** 노출하고 파트장·타인에겐 절대 노출하지 않는다 → 비공개 원칙 유지.
+- Birkman 미완료 사용자는 추천 없이 일반 흐름으로 동작(graceful degradation).
 
 ---
 
