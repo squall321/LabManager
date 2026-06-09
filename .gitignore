@@ -1,0 +1,34 @@
+# ── Python / Backend ──
+__pycache__/
+*.py[cod]
+*.so
+*.pyd
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+backend/data/*.db
+.env
+.env.*
+
+# ── Node / Frontend ──
+node_modules/
+frontend/dist/
+frontend/dist-ssr/
+*.local
+
+# ── C++ build artifacts ──
+backend/cpp/build/
+*.obj
+*.o
+
+# ── OS / Editor ──
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# ── Claude Code local settings (machine-local) ──
+.claude/settings.local.json

@@ -1,0 +1,35 @@
+# LabManager HR System - 사용자 계정 설정
+# 이 파일에 이름과 이메일을 추가하면 시스템 시작 시 자동으로 계정이 생성됩니다.
+# 최초 로그인 시 사용자가 직접 비밀번호를 설정합니다.
+#
+# 필드 설명:
+#   name:     사용자 이름 (한글 가능)
+#   email:    로그인에 사용할 이메일 주소 (고유해야 함)
+#   is_admin: 관리자 여부 (true/false, 기본값: false)
+
+users:
+  # 관리자 계정
+  - name: 관리자
+    email: admin@company.com
+    is_admin: true
+
+  # 팀 구성원 — 아래에 추가하세요
+  - name: 박국진
+    email: koo.park@samsung.com
+    is_admin: true
+
+  - name: 이서연
+    email: seoyeon.lee@company.com
+    is_admin: false
+
+  - name: 박지호
+    email: jiho.park@company.com
+    is_admin: false
+
+  - name: 최수아
+    email: sua.choi@company.com
+    is_admin: false
+
+  - name: 정현우
+    email: hyunwoo.jung@company.com
+    is_admin: false
