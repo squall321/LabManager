@@ -75,6 +75,31 @@ pip install .       # birkman_calc 모듈을 가상환경에 설치
 
 ---
 
+## 🗄️ 데이터베이스 마이그레이션 (Alembic)
+
+개발 중에는 서버 시작 시 `create_all`이 누락 테이블을 자동 생성하므로 별도 작업이 필요 없습니다.
+**운영**에서는 데이터를 보존하며 스키마를 변경하기 위해 Alembic을 사용합니다.
+
+```powershell
+cd backend
+.\.venv\Scripts\Activate.ps1
+
+# 신규 DB에 전체 스키마 적용
+alembic upgrade head
+
+# 이미 create_all 로 만든 기존 DB라면 최초 1회만 현재 버전으로 표시
+alembic stamp head
+
+# 모델 변경 후 새 마이그레이션 자동 생성 → 검토 후 적용
+alembic revision --autogenerate -m "변경 설명"
+alembic upgrade head
+```
+
+> SQLite의 제한적 ALTER를 위해 `render_as_batch=True`로 구성되어 있습니다. 마이그레이션 파일은
+> [backend/alembic/versions/](backend/alembic/versions/)에 커밋됩니다.
+
+---
+
 ## 👤 계정 관리 (YAML 기반)
 
 [backend/data/users.yaml](backend/data/users.yaml)에 이름과 이메일을 추가하면
