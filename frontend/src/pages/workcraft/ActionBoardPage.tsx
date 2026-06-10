@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   KanbanSquare, Loader2, Plus, Sparkles, FileCode2, ChevronRight, Lock,
-  GripVertical, CalendarClock, Pencil, BookOpenCheck,
+  GripVertical, CalendarClock, Pencil, BookOpenCheck, X,
 } from 'lucide-react'
 import { listMissions, updateMission } from '../../services/api'
 import { toast } from '../../store/toastStore'
@@ -30,6 +30,7 @@ export default function ActionBoardPage() {
   const queryClient = useQueryClient()
   const [dragId, setDragId] = useState<number | null>(null)
   const [overCol, setOverCol] = useState<MissionStatus | null>(null)
+  const [detail, setDetail] = useState<GrowthMission | null>(null)
 
   const { data: missions, isLoading } = useQuery<GrowthMission[]>({
     queryKey: ['missions'], queryFn: listMissions,
@@ -133,7 +134,10 @@ export default function ActionBoardPage() {
                       >
                         <div className="flex items-start gap-1">
                           <GripVertical className="w-3.5 h-3.5 text-slate-300 mt-0.5 flex-shrink-0" />
-                          <h4 className="text-sm font-semibold text-slate-800 leading-snug line-clamp-3 flex-1">{m.title}</h4>
+                          <button onClick={() => setDetail(m)}
+                            className="text-sm font-semibold text-slate-800 leading-snug line-clamp-3 flex-1 text-left hover:text-brand-600 transition-colors">
+                            {m.title}
+                          </button>
                         </div>
                         {m.due_date && (
                           <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-1.5 pl-4">
@@ -174,6 +178,61 @@ export default function ActionBoardPage() {
           })}
         </div>
       )}
+
+      {/* Mission detail modal */}
+      <AnimatePresence>
+        {detail && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setDetail(null)}
+          >
+            <motion.div
+              className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[85vh] overflow-y-auto"
+              initial={{ scale: 0.95, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between p-5 border-b border-slate-100">
+                <div>
+                  <div className="text-xs text-slate-400 mb-1">미션 상세</div>
+                  <h2 className="text-lg font-bold text-slate-900">{detail.title}</h2>
+                </div>
+                <button onClick={() => setDetail(null)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+              </div>
+              <div className="p-5 space-y-3.5">
+                {(detail.start_date || detail.due_date) && (
+                  <div className="flex items-center gap-2 text-sm text-slate-500">
+                    <CalendarClock className="w-4 h-4" />
+                    {detail.start_date || '—'} ~ {detail.due_date || '—'}
+                  </div>
+                )}
+                {[
+                  { label: '현재 불편한 점', value: detail.problem },
+                  { label: '목표', value: detail.goal },
+                  { label: '원하는 결과물', value: detail.output },
+                  { label: '범위(최소 결과물)', value: detail.scope },
+                  { label: '성공 기준', value: detail.success_criteria },
+                  { label: '배우고 싶은 역량', value: detail.learning_goal },
+                ].filter((f) => f.value).map((f) => (
+                  <div key={f.label}>
+                    <div className="text-xs font-semibold text-slate-400 mb-0.5">{f.label}</div>
+                    <p className="text-sm text-slate-700 whitespace-pre-line">{f.value}</p>
+                  </div>
+                ))}
+                {!detail.problem && !detail.goal && !detail.output && !detail.scope && !detail.success_criteria && (
+                  <p className="text-sm text-slate-400">추가 내용이 없습니다. 수정에서 세부 내용을 채워보세요.</p>
+                )}
+              </div>
+              <div className="flex gap-2 p-5 border-t border-slate-100">
+                <button onClick={() => { const id = detail.id; setDetail(null); navigate(`/workcraft/missions/${id}/edit`) }}
+                  className="btn-secondary text-sm flex-1"><Pencil className="w-4 h-4" /> 수정</button>
+                <button onClick={() => { const id = detail.id; setDetail(null); navigate(`/workcraft/missions/${id}/prompt`) }}
+                  className="btn-primary text-sm flex-1"><FileCode2 className="w-4 h-4" /> 실행 명세서</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

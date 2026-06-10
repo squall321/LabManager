@@ -89,6 +89,7 @@ export interface SurveyStatus {
   status?: 'in_progress' | 'completed'
   current_section?: number
   responses_count?: number
+  total_questions?: number
   completed_at?: string
 }
 
