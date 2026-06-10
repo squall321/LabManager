@@ -181,20 +181,23 @@ Acceptance Criteria / Test Plan / Do Not Modify / Implementation Steps
 
 기획서 §19 우선순위를 LabManager 구현 단위로 변환:
 
-### Phase 1 — 개인 코어 (MVP 1순위)
-- [ ] `User` 모델 확장(department, is_part_leader) + YAML 필드 + 동기화 반영
-- [ ] `models/workcraft.py` 6개 테이블 + 마이그레이션
-- [ ] 개인 CRUD API (frictions, missions) + `visibility` 강제(기본 private)
-- [ ] `prompt_builder.py` + 프롬프트 생성 API
-- [ ] `recommendation.py` (본인 BirkmanReport 기반 미션/스킬 추천, 순수 함수)
-- [ ] 프론트 페이지 1·2·3·4 + 모듈 스위처
-- [ ] 공유 범위 셀렉터 컴포넌트(4단계)
+### Phase 1 — 개인 코어 (MVP 1순위) ✅ 완료
+- [x] `User` 모델 확장(department, is_part_leader) + YAML 필드 + 동기화 반영
+- [x] `models/workcraft.py` 6개 테이블
+- [x] 개인 CRUD API (frictions, missions) + `visibility` 강제(기본 private)
+- [x] `prompt_builder.py` + 프롬프트 생성 API
+- [x] `recommendation.py` (본인 BirkmanReport 기반 미션/스킬 추천, 순수 함수)
+- [x] 프론트 페이지 1·2·3·4 + 모듈 스위처
+- [x] 공유 범위 셀렉터 컴포넌트(4단계)
+- [x] (추가) 공유 불편함 보드 — 타인의 공유 불편함에서 미션 생성
+- [x] (추가) 미션 일정(start/due) + 캘린더 페이지
+- [x] (추가) 칸반 드래그앤드롭
 
-### Phase 2 — 공유와 익명 집계 (2순위)
-- [ ] 공유 템플릿 라이브러리(페이지 5) + 익명화 로직
-- [ ] `trends_service.py` 익명 집계 + `ANONYMITY_MIN_N=5` 임계값 + `get_current_part_leader`
-- [ ] 파트장 익명 대시보드(페이지 6, Recharts 재사용) + "기여자 N/5" 진행 상태 UI
-- [ ] 지원 요청 등록
+### Phase 2 — 공유와 익명 집계 (2순위) ✅ 완료
+- [x] 공유 템플릿 라이브러리(페이지 5) + 익명화 로직
+- [x] `trends_service.py` 익명 집계 + `ANONYMITY_MIN_N=5` 임계값 + `get_current_part_leader`
+- [x] 파트장 익명 대시보드(페이지 6) + "기여자 N/5" 진행 상태 UI
+- [x] 지원 요청 등록
 
 ### Phase 3 — 회고·성장 (3순위)
 - [ ] 배운 점 기록(MissionReview) + 회고 템플릿
