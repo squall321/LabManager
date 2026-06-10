@@ -3,10 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from .core.database import engine, Base, SessionLocal
-from .models import user, survey, workcraft  # noqa: F401 — register models
+from .models import user, survey, workcraft, assessment  # noqa: F401 — register models
 from .api import (
     auth, survey as survey_router, reports, admin,
     workcraft as workcraft_router, templates as templates_router, leader as leader_router,
+    assessments as assessments_router,
 )
 from .services.auth_service import load_users_from_yaml
 from .core.config import settings
@@ -47,6 +48,7 @@ app.include_router(admin.router, prefix="/api")
 app.include_router(workcraft_router.router, prefix="/api")
 app.include_router(templates_router.router, prefix="/api")
 app.include_router(leader_router.router, prefix="/api")
+app.include_router(assessments_router.router, prefix="/api")
 
 
 @app.get("/api/health")

@@ -29,6 +29,22 @@ def client():
         yield c
 
 
+@pytest.fixture(autouse=True)
+def reset_db(client):
+    """각 테스트 전에 모든 데이터를 비우고 YAML 시드를 다시 로드 → 순서 독립."""
+    from app.core.database import SessionLocal, Base
+    from app.services.auth_service import load_users_from_yaml
+    db = SessionLocal()
+    try:
+        for table in reversed(Base.metadata.sorted_tables):
+            db.execute(table.delete())
+        db.commit()
+        load_users_from_yaml(db)
+    finally:
+        db.close()
+    yield
+
+
 @pytest.fixture
 def login(client):
     """이메일로 계정 활성화(또는 로그인) 후 Authorization 헤더 반환."""
