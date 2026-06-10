@@ -14,8 +14,9 @@ from .core.config import settings
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 테이블 생성
-    Base.metadata.create_all(bind=engine)
+    # 개발 편의용 자동 테이블 생성 (운영에서는 AUTO_CREATE_ALL=false + Alembic)
+    if settings.AUTO_CREATE_ALL:
+        Base.metadata.create_all(bind=engine)
     # YAML 사용자 동기화
     db = SessionLocal()
     try:

@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     DATABASE_URL: str = f"sqlite:///{BASE_DIR}/data/labmanager.db"
     USERS_YAML_PATH: str = str(BASE_DIR / "data" / "users.yaml")
 
+    # 개발 편의: 시작 시 누락 테이블 자동 생성. 운영(Docker)에서는 false로 두고
+    # Alembic 마이그레이션(alembic upgrade head)으로 스키마를 관리한다.
+    AUTO_CREATE_ALL: bool = True
+
     APP_NAME: str = "LabManager HR System"
     APP_VERSION: str = "1.0.0"
 

@@ -97,6 +97,8 @@ alembic upgrade head
 
 > SQLite의 제한적 ALTER를 위해 `render_as_batch=True`로 구성되어 있습니다. 마이그레이션 파일은
 > [backend/alembic/versions/](backend/alembic/versions/)에 커밋됩니다.
+>
+> 운영 시 `AUTO_CREATE_ALL=false`로 두면 시작 시 자동 테이블 생성을 끄고 Alembic만으로 스키마를 관리합니다.
 
 ---
 
