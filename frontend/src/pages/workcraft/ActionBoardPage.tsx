@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
+  DndContext, PointerSensor, TouchSensor, useSensor, useSensors,
+  useDraggable, useDroppable, closestCorners, type DragEndEvent,
+} from '@dnd-kit/core'
+import {
   KanbanSquare, Loader2, Plus, Sparkles, FileCode2, ChevronRight, Lock,
   GripVertical, CalendarClock, Pencil, BookOpenCheck, X,
 } from 'lucide-react'
@@ -25,14 +29,97 @@ const NEXT: Record<MissionStatus, MissionStatus | null> = {
   review: 'done', done: 'shared', shared: null,
 }
 
+interface CardProps {
+  m: GrowthMission
+  onDetail: (m: GrowthMission) => void
+  onMove: (id: number, status: MissionStatus) => void
+  onNav: (path: string) => void
+}
+
+function MissionCard({ m, onDetail, onMove, onNav }: CardProps) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: m.id })
+  const next = NEXT[m.status]
+  const completed = m.status === 'done' || m.status === 'shared'
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn('bg-white rounded-xl p-2.5 shadow-sm border border-slate-100', isDragging && 'opacity-40')}
+    >
+      <div className="flex items-start gap-1">
+        <button
+          {...attributes} {...listeners}
+          aria-label="드래그하여 단계 이동"
+          className="touch-none cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-400 mt-0.5 flex-shrink-0"
+        >
+          <GripVertical className="w-3.5 h-3.5" />
+        </button>
+        <button onClick={() => onDetail(m)}
+          className="text-sm font-semibold text-slate-800 leading-snug line-clamp-3 flex-1 text-left hover:text-brand-600 transition-colors">
+          {m.title}
+        </button>
+      </div>
+      {m.due_date && (
+        <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-1.5 pl-4">
+          <CalendarClock className="w-3 h-3" /> {m.due_date}
+        </div>
+      )}
+      <div className="flex items-center gap-1.5 mt-2">
+        {completed ? (
+          <button onClick={() => onNav(`/workcraft/missions/${m.id}/review`)}
+            className="flex-1 inline-flex items-center justify-center gap-1 text-[11px] font-medium text-green-600 bg-green-50 hover:bg-green-100 rounded-lg py-1.5 transition-colors">
+            <BookOpenCheck className="w-3 h-3" /> 배운 점
+          </button>
+        ) : (
+          <button onClick={() => onNav(`/workcraft/missions/${m.id}/prompt`)}
+            className="flex-1 inline-flex items-center justify-center gap-1 text-[11px] font-medium text-brand-600 bg-brand-50 hover:bg-brand-100 rounded-lg py-1.5 transition-colors">
+            <FileCode2 className="w-3 h-3" /> 명세서
+          </button>
+        )}
+        <button onClick={() => onNav(`/workcraft/missions/${m.id}/edit`)} aria-label="수정" title="수정"
+          className="inline-flex items-center justify-center text-slate-400 hover:text-brand-600 bg-slate-50 hover:bg-slate-100 rounded-lg p-1.5 transition-colors">
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
+        {next && (
+          <button onClick={() => onMove(m.id, next)} aria-label="다음 단계로" title="다음 단계로"
+            className="inline-flex items-center justify-center text-slate-400 hover:text-brand-600 bg-slate-50 hover:bg-slate-100 rounded-lg p-1.5 transition-colors">
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function Column({ col, count, children }: { col: typeof COLUMNS[number]; count: number; children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id: col.key })
+  return (
+    <div ref={setNodeRef}
+      className={cn('rounded-2xl p-2.5 min-h-[140px] transition-colors',
+        isOver ? 'bg-brand-100/70 ring-2 ring-brand-300' : 'bg-slate-100/60')}>
+      <div className="flex items-center gap-1.5 px-1.5 py-1 mb-2">
+        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: col.color }} />
+        <span className="text-sm font-semibold text-slate-700">{col.label}</span>
+        <span className="text-xs text-slate-400 ml-auto">{count}</span>
+      </div>
+      <div className="space-y-2">{children}</div>
+    </div>
+  )
+}
+
 export default function ActionBoardPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [dragId, setDragId] = useState<number | null>(null)
-  const [overCol, setOverCol] = useState<MissionStatus | null>(null)
   const [detail, setDetail] = useState<GrowthMission | null>(null)
 
-  // 모달: ESC로 닫기
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 6 } }),
+  )
+
+  const { data: missions, isLoading } = useQuery<GrowthMission[]>({
+    queryKey: ['missions'], queryFn: listMissions,
+  })
+
   useEffect(() => {
     if (!detail) return
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setDetail(null) }
@@ -40,19 +127,13 @@ export default function ActionBoardPage() {
     return () => window.removeEventListener('keydown', onKey)
   }, [detail])
 
-  const { data: missions, isLoading } = useQuery<GrowthMission[]>({
-    queryKey: ['missions'], queryFn: listMissions,
-  })
-
   const moveMut = useMutation({
     mutationFn: ({ id, status }: { id: number; status: MissionStatus }) => updateMission(id, { status }),
-    // 낙관적 업데이트로 드래그 후 즉시 반영
     onMutate: async ({ id, status }) => {
       await queryClient.cancelQueries({ queryKey: ['missions'] })
       const prev = queryClient.getQueryData<GrowthMission[]>(['missions'])
       queryClient.setQueryData<GrowthMission[]>(['missions'], (old) =>
-        (old ?? []).map((m) => (m.id === id ? { ...m, status } : m))
-      )
+        (old ?? []).map((m) => (m.id === id ? { ...m, status } : m)))
       return { prev }
     },
     onError: (_e, _v, ctx) => { if (ctx?.prev) queryClient.setQueryData(['missions'], ctx.prev); toast.error('이동에 실패했어요') },
@@ -66,13 +147,14 @@ export default function ActionBoardPage() {
     },
   })
 
-  const onDrop = (status: MissionStatus) => {
-    if (dragId != null) {
-      const m = missions?.find((x) => x.id === dragId)
-      if (m && m.status !== status) moveMut.mutate({ id: dragId, status })
-    }
-    setDragId(null)
-    setOverCol(null)
+  const move = (id: number, status: MissionStatus) => moveMut.mutate({ id, status })
+
+  const onDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e
+    if (!over) return
+    const m = missions?.find((x) => x.id === active.id)
+    const target = over.id as MissionStatus
+    if (m && m.status !== target) move(m.id, target)
   }
 
   return (
@@ -106,85 +188,20 @@ export default function ActionBoardPage() {
           <button onClick={() => navigate('/workcraft/missions/new')} className="btn-secondary">첫 미션 만들기</button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
-          {COLUMNS.map((col) => {
-            const items = missions.filter((m) => m.status === col.key)
-            const isOver = overCol === col.key
-            return (
-              <div
-                key={col.key}
-                onDragOver={(e) => { e.preventDefault(); setOverCol(col.key) }}
-                onDragLeave={() => setOverCol((c) => (c === col.key ? null : c))}
-                onDrop={() => onDrop(col.key)}
-                className={cn(
-                  'rounded-2xl p-2.5 min-h-[140px] transition-colors',
-                  isOver ? 'bg-brand-100/70 ring-2 ring-brand-300' : 'bg-slate-100/60'
-                )}
-              >
-                <div className="flex items-center gap-1.5 px-1.5 py-1 mb-2">
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: col.color }} />
-                  <span className="text-sm font-semibold text-slate-700">{col.label}</span>
-                  <span className="text-xs text-slate-400 ml-auto">{items.length}</span>
-                </div>
-                <div className="space-y-2">
-                  {items.map((m) => {
-                    const next = NEXT[m.status]
-                    return (
-                      <motion.div
-                        key={m.id}
-                        layout
-                        draggable
-                        onDragStart={() => setDragId(m.id)}
-                        onDragEnd={() => { setDragId(null); setOverCol(null) }}
-                        initial={{ opacity: 0, scale: 0.96 }}
-                        animate={{ opacity: dragId === m.id ? 0.4 : 1, scale: 1 }}
-                        className="bg-white rounded-xl p-2.5 shadow-sm border border-slate-100 cursor-grab active:cursor-grabbing"
-                      >
-                        <div className="flex items-start gap-1">
-                          <GripVertical className="w-3.5 h-3.5 text-slate-300 mt-0.5 flex-shrink-0" />
-                          <button onClick={() => setDetail(m)}
-                            className="text-sm font-semibold text-slate-800 leading-snug line-clamp-3 flex-1 text-left hover:text-brand-600 transition-colors">
-                            {m.title}
-                          </button>
-                        </div>
-                        {m.due_date && (
-                          <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-1.5 pl-4">
-                            <CalendarClock className="w-3 h-3" /> {m.due_date}
-                          </div>
-                        )}
-                        <div className="flex items-center gap-1.5 mt-2">
-                          {(m.status === 'done' || m.status === 'shared') ? (
-                            <button onClick={() => navigate(`/workcraft/missions/${m.id}/review`)}
-                              className="flex-1 inline-flex items-center justify-center gap-1 text-[11px] font-medium text-green-600 bg-green-50 hover:bg-green-100 rounded-lg py-1.5 transition-colors">
-                              <BookOpenCheck className="w-3 h-3" /> 배운 점
-                            </button>
-                          ) : (
-                            <button onClick={() => navigate(`/workcraft/missions/${m.id}/prompt`)}
-                              className="flex-1 inline-flex items-center justify-center gap-1 text-[11px] font-medium text-brand-600 bg-brand-50 hover:bg-brand-100 rounded-lg py-1.5 transition-colors">
-                              <FileCode2 className="w-3 h-3" /> 명세서
-                            </button>
-                          )}
-                          <button onClick={() => navigate(`/workcraft/missions/${m.id}/edit`)}
-                            title="수정"
-                            className="inline-flex items-center justify-center text-slate-400 hover:text-brand-600 bg-slate-50 hover:bg-slate-100 rounded-lg p-1.5 transition-colors">
-                            <Pencil className="w-3.5 h-3.5" />
-                          </button>
-                          {next && (
-                            <button onClick={() => moveMut.mutate({ id: m.id, status: next })}
-                              title={`다음 단계로`}
-                              className="inline-flex items-center justify-center text-slate-400 hover:text-brand-600 bg-slate-50 hover:bg-slate-100 rounded-lg p-1.5 transition-colors">
-                              <ChevronRight className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      </motion.div>
-                    )
-                  })}
-                </div>
-              </div>
-            )
-          })}
-        </div>
+        <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={onDragEnd}>
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+            {COLUMNS.map((col) => {
+              const items = missions.filter((m) => m.status === col.key)
+              return (
+                <Column key={col.key} col={col} count={items.length}>
+                  {items.map((m) => (
+                    <MissionCard key={m.id} m={m} onDetail={setDetail} onMove={move} onNav={navigate} />
+                  ))}
+                </Column>
+              )
+            })}
+          </div>
+        </DndContext>
       )}
 
       {/* Mission detail modal */}
