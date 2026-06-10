@@ -187,6 +187,47 @@ export interface SharedTemplate {
   created_at: string
 }
 
+export interface MissionReview {
+  id: number
+  mission_id: number
+  result_summary: string
+  learned_skill: string
+  business_impact: string
+  claude_good_points: string
+  claude_bad_points: string
+  next_action: string
+  created_at: string
+}
+
+// ── Growth (personal · private) ──
+export interface Milestone {
+  key: string
+  title: string
+  desc: string
+  achieved: boolean
+}
+
+export interface TimelineEvent {
+  date: string
+  type: 'friction' | 'mission' | 'completed' | 'learning'
+  title: string
+}
+
+export interface GrowthSummary {
+  counts: {
+    frictions: number
+    missions: number
+    completed: number
+    shared: number
+    prompts: number
+    learnings: number
+  }
+  skills: string[]
+  milestones: Milestone[]
+  timeline: TimelineEvent[]
+  monthly_completed: { month: string; count: number }[]
+}
+
 export interface SupportRequest {
   id: number
   request_type: string

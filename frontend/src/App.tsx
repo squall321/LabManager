@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 import { Layout } from './components/Layout/Layout'
+import { Toaster } from './components/Toaster'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import SurveyPage from './pages/SurveyPage'
@@ -16,6 +17,8 @@ import PromptStudioPage from './pages/workcraft/PromptStudioPage'
 import TemplateLibraryPage from './pages/workcraft/TemplateLibraryPage'
 import SupportRequestPage from './pages/workcraft/SupportRequestPage'
 import LeaderDashboardPage from './pages/workcraft/LeaderDashboardPage'
+import ReviewPage from './pages/workcraft/ReviewPage'
+import MyGrowthPage from './pages/workcraft/MyGrowthPage'
 
 function ProtectedRoute({
   children, adminOnly = false, leaderOnly = false,
@@ -30,6 +33,7 @@ function ProtectedRoute({
 export default function App() {
   return (
     <BrowserRouter>
+      <Toaster />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route
@@ -50,11 +54,14 @@ export default function App() {
           <Route path="/workcraft/frictions" element={<FrictionsPage />} />
           <Route path="/workcraft/team-frictions" element={<TeamFrictionsPage />} />
           <Route path="/workcraft/missions/new" element={<MissionBuilderPage />} />
+          <Route path="/workcraft/missions/:missionId/edit" element={<MissionBuilderPage />} />
           <Route path="/workcraft/board" element={<ActionBoardPage />} />
           <Route path="/workcraft/calendar" element={<CalendarPage />} />
+          <Route path="/workcraft/growth" element={<MyGrowthPage />} />
           <Route path="/workcraft/templates" element={<TemplateLibraryPage />} />
           <Route path="/workcraft/support" element={<SupportRequestPage />} />
           <Route path="/workcraft/missions/:missionId/prompt" element={<PromptStudioPage />} />
+          <Route path="/workcraft/missions/:missionId/review" element={<ReviewPage />} />
           <Route
             path="/workcraft/leader"
             element={

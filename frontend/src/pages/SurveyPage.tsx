@@ -48,11 +48,24 @@ export default function SurveyPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  const [highlightUnanswered, setHighlightUnanswered] = useState(false)
+
   const handleAnswer = (qId: number, value: number) => {
     setAnswers((prev) => ({ ...prev, [qId]: value }))
   }
 
   const allAnswered = section ? section.questions.every((q) => answers[q.id]) : false
+  const remaining = section ? section.questions.filter((q) => !answers[q.id]).length : 0
+
+  const scrollToFirstUnanswered = () => {
+    if (!section) return
+    const first = section.questions.find((q) => !answers[q.id])
+    if (first) {
+      setHighlightUnanswered(true)
+      document.getElementById(`q-${first.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setTimeout(() => setHighlightUnanswered(false), 2400)
+    }
+  }
 
   const handleSubmit = async () => {
     if (!section || !surveyId || !allAnswered) return
@@ -151,10 +164,13 @@ export default function SurveyPage() {
           {section.questions.map((q, idx) => (
             <motion.div
               key={q.id}
+              id={`q-${q.id}`}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.02 }}
-              className="card"
+              className={`card transition-shadow ${
+                highlightUnanswered && !answers[q.id] ? 'ring-2 ring-amber-300 shadow-md' : ''
+              }`}
             >
               <div className="flex gap-3 mb-4">
                 <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-brand-50 text-brand-600 text-sm font-semibold flex items-center justify-center">
@@ -204,19 +220,28 @@ export default function SurveyPage() {
           >
             <ArrowLeft className="w-4 h-4" /> 나중에 하기
           </button>
-          <button
-            onClick={handleSubmit}
-            disabled={!allAnswered || submitting}
-            className="btn-primary min-w-[140px]"
-          >
-            {submitting ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : section.section === section.total_sections ? (
-              <>제출하고 완료 <CheckCircle2 className="w-4 h-4" /></>
-            ) : (
-              <>다음 섹션 <ArrowRight className="w-4 h-4" /></>
+          <div className="flex items-center gap-3">
+            {!allAnswered && (
+              <button onClick={scrollToFirstUnanswered} className="text-sm font-medium text-amber-600 hover:text-amber-700">
+                {remaining}개 문항이 남았어요 →
+              </button>
             )}
-          </button>
+            <button
+              onClick={allAnswered ? handleSubmit : scrollToFirstUnanswered}
+              disabled={submitting}
+              className="btn-primary min-w-[140px]"
+            >
+              {submitting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : !allAnswered ? (
+                <>남은 문항으로 <ArrowRight className="w-4 h-4" /></>
+              ) : section.section === section.total_sections ? (
+                <>제출하고 완료 <CheckCircle2 className="w-4 h-4" /></>
+              ) : (
+                <>다음 섹션 <ArrowRight className="w-4 h-4" /></>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>

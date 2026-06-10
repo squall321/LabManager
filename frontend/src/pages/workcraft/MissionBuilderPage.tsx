@@ -1,16 +1,19 @@
-import { useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useLocation, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { Target, Loader2, Sparkles, Wand2, Lightbulb, ArrowRight } from 'lucide-react'
-import { createMission, getRecommendations } from '../../services/api'
+import { createMission, updateMission, listMissions, getRecommendations } from '../../services/api'
 import { VisibilitySelector } from '../../components/workcraft/VisibilitySelector'
-import type { WorkFriction, Recommendation, Visibility } from '../../types'
+import { toast } from '../../store/toastStore'
+import type { WorkFriction, GrowthMission, Recommendation, Visibility } from '../../types'
 
 export default function MissionBuilderPage() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { missionId } = useParams()
   const queryClient = useQueryClient()
+  const editId = missionId ? Number(missionId) : null
   const friction = (location.state as any)?.friction as WorkFriction | undefined
   const sharedFriction = (location.state as any)?.sharedFriction as
     | { id: number; title: string; description: string; related_skill: string; owner_name: string }
@@ -38,12 +41,37 @@ export default function MissionBuilderPage() {
     queryKey: ['wc-recommendations'], queryFn: getRecommendations,
   })
 
-  const createMut = useMutation({
-    mutationFn: () => createMission(form),
+  // 편집 모드: 기존 미션 로드 후 폼 채우기
+  const { data: missions } = useQuery<GrowthMission[]>({
+    queryKey: ['missions'], queryFn: listMissions, enabled: !!editId,
+  })
+  useEffect(() => {
+    if (!editId || !missions) return
+    const m = missions.find((x) => x.id === editId)
+    if (m) {
+      setForm({
+        title: m.title, problem: m.problem, goal: m.goal, output: m.output, scope: m.scope,
+        success_criteria: m.success_criteria, deadline: m.deadline, learning_goal: m.learning_goal,
+        start_date: m.start_date, due_date: m.due_date,
+        work_friction_id: m.work_friction_id, origin_friction_id: m.origin_friction_id,
+        status: m.status as 'idea', visibility: m.visibility,
+      })
+    }
+  }, [editId, missions])
+
+  const saveMut = useMutation({
+    mutationFn: () => (editId ? updateMission(editId, form) : createMission(form)),
     onSuccess: (mission) => {
       queryClient.invalidateQueries({ queryKey: ['missions'] })
-      navigate(`/workcraft/missions/${mission.id}/prompt`)
+      if (editId) {
+        toast.success('미션을 수정했어요')
+        navigate('/workcraft/board')
+      } else {
+        toast.success('미션을 만들었어요. 실행 명세서를 준비했어요')
+        navigate(`/workcraft/missions/${mission.id}/prompt`)
+      }
     },
+    onError: () => toast.error('저장에 실패했어요. 다시 시도해주세요'),
   })
 
   const set = (k: string, v: any) => setForm((p) => ({ ...p, [k]: v }))
@@ -55,9 +83,11 @@ export default function MissionBuilderPage() {
           <Sparkles className="w-4 h-4" /> WorkCraft Studio
         </div>
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-          <Target className="w-6 h-6 text-brand-500" /> 미션 만들기
+          <Target className="w-6 h-6 text-brand-500" /> {editId ? '미션 수정' : '미션 만들기'}
         </h1>
-        <p className="text-slate-500 mt-1">불편함을 이번 달 안에 끝낼 수 있는 작은 미션으로 바꿔보세요.</p>
+        <p className="text-slate-500 mt-1">
+          {editId ? '미션 내용을 다듬어보세요.' : '불편함을 이번 달 안에 끝낼 수 있는 작은 미션으로 바꿔보세요.'}
+        </p>
       </motion.div>
 
       <div className="grid lg:grid-cols-3 gap-6">
@@ -131,9 +161,11 @@ export default function MissionBuilderPage() {
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-1">
-            <button onClick={() => navigate('/workcraft/frictions')} className="btn-secondary">취소</button>
-            <button onClick={() => createMut.mutate()} disabled={!form.title || createMut.isPending} className="btn-primary">
-              {createMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <>저장하고 명세서 만들기 <ArrowRight className="w-4 h-4" /></>}
+            <button onClick={() => navigate(editId ? '/workcraft/board' : '/workcraft/frictions')} className="btn-secondary">취소</button>
+            <button onClick={() => saveMut.mutate()} disabled={!form.title || saveMut.isPending} className="btn-primary">
+              {saveMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" />
+                : editId ? '수정 저장'
+                : <>저장하고 명세서 만들기 <ArrowRight className="w-4 h-4" /></>}
             </button>
           </div>
         </div>

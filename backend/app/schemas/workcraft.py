@@ -158,6 +158,47 @@ class SupportRequestResponse(BaseModel):
         from_attributes = True
 
 
+# ── Mission Review (배운 점 기록) ──
+class MissionReviewCreate(BaseModel):
+    result_summary: str = ""
+    learned_skill: str = ""
+    business_impact: str = ""
+    claude_good_points: str = ""
+    claude_bad_points: str = ""
+    next_action: str = ""
+
+
+class MissionReviewResponse(MissionReviewCreate):
+    id: int
+    mission_id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ── Growth (개인 성장 여정 · 비공개) ──
+class Milestone(BaseModel):
+    key: str
+    title: str
+    desc: str
+    achieved: bool
+
+
+class TimelineEvent(BaseModel):
+    date: datetime
+    type: str          # friction | mission | completed | learning
+    title: str
+
+
+class GrowthSummary(BaseModel):
+    counts: dict
+    skills: List[str]
+    milestones: List[Milestone]
+    timeline: List[TimelineEvent]
+    monthly_completed: List[dict]
+
+
 # ── Recommendation (Birkman 연계) ──
 class RecommendationItem(BaseModel):
     title: str

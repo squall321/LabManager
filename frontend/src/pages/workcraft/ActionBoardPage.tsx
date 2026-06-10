@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import {
-  KanbanSquare, Loader2, Plus, Sparkles, FileCode2, ChevronRight, Lock, GripVertical, CalendarClock,
+  KanbanSquare, Loader2, Plus, Sparkles, FileCode2, ChevronRight, Lock,
+  GripVertical, CalendarClock, Pencil, BookOpenCheck,
 } from 'lucide-react'
 import { listMissions, updateMission } from '../../services/api'
+import { toast } from '../../store/toastStore'
 import type { GrowthMission, MissionStatus } from '../../types'
 import { cn } from '../../lib/utils'
 
@@ -44,8 +46,15 @@ export default function ActionBoardPage() {
       )
       return { prev }
     },
-    onError: (_e, _v, ctx) => ctx?.prev && queryClient.setQueryData(['missions'], ctx.prev),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ['missions'] }),
+    onError: (_e, _v, ctx) => { if (ctx?.prev) queryClient.setQueryData(['missions'], ctx.prev); toast.error('이동에 실패했어요') },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['missions'] })
+      queryClient.invalidateQueries({ queryKey: ['growth'] })
+    },
+    onSuccess: (_d, vars) => {
+      if (vars.status === 'done') toast.success('미션을 완성했어요! 배운 점을 남겨보면 성장 여정에 쌓여요 🌱')
+      else if (vars.status === 'shared') toast.success('동료와 공유했어요. 멋진 나눔이에요 ✨')
+    },
   })
 
   const onDrop = (status: MissionStatus) => {
@@ -132,9 +141,21 @@ export default function ActionBoardPage() {
                           </div>
                         )}
                         <div className="flex items-center gap-1.5 mt-2">
-                          <button onClick={() => navigate(`/workcraft/missions/${m.id}/prompt`)}
-                            className="flex-1 inline-flex items-center justify-center gap-1 text-[11px] font-medium text-brand-600 bg-brand-50 hover:bg-brand-100 rounded-lg py-1.5 transition-colors">
-                            <FileCode2 className="w-3 h-3" /> 명세서
+                          {(m.status === 'done' || m.status === 'shared') ? (
+                            <button onClick={() => navigate(`/workcraft/missions/${m.id}/review`)}
+                              className="flex-1 inline-flex items-center justify-center gap-1 text-[11px] font-medium text-green-600 bg-green-50 hover:bg-green-100 rounded-lg py-1.5 transition-colors">
+                              <BookOpenCheck className="w-3 h-3" /> 배운 점
+                            </button>
+                          ) : (
+                            <button onClick={() => navigate(`/workcraft/missions/${m.id}/prompt`)}
+                              className="flex-1 inline-flex items-center justify-center gap-1 text-[11px] font-medium text-brand-600 bg-brand-50 hover:bg-brand-100 rounded-lg py-1.5 transition-colors">
+                              <FileCode2 className="w-3 h-3" /> 명세서
+                            </button>
+                          )}
+                          <button onClick={() => navigate(`/workcraft/missions/${m.id}/edit`)}
+                            title="수정"
+                            className="inline-flex items-center justify-center text-slate-400 hover:text-brand-600 bg-slate-50 hover:bg-slate-100 rounded-lg p-1.5 transition-colors">
+                            <Pencil className="w-3.5 h-3.5" />
                           </button>
                           {next && (
                             <button onClick={() => moveMut.mutate({ id: m.id, status: next })}

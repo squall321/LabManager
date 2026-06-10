@@ -5,15 +5,17 @@ from datetime import datetime
 from ..core.database import get_db
 from ..models.user import User
 from ..models.survey import BirkmanReport
-from ..models.workcraft import WorkFriction, GrowthMission, ClaudePrompt
+from ..models.workcraft import WorkFriction, GrowthMission, ClaudePrompt, MissionReview
 from ..schemas.workcraft import (
     WorkFrictionCreate, WorkFrictionUpdate, WorkFrictionResponse,
     GrowthMissionCreate, GrowthMissionUpdate, GrowthMissionResponse,
     ClaudePromptResponse, RecommendationResponse, SharedFrictionResponse,
+    MissionReviewCreate, MissionReviewResponse, GrowthSummary,
     VISIBILITY_VALUES, MISSION_STATUS_VALUES,
 )
 from ..services.prompt_builder import build_prompt
 from ..services.recommendation import recommend
+from ..services.growth_service import build_growth
 from .deps import get_current_user
 
 router = APIRouter(prefix="/workcraft", tags=["WorkCraft"])
@@ -260,3 +262,51 @@ def get_recommendations(current_user: User = Depends(get_current_user), db: Sess
     report = db.query(BirkmanReport).filter(BirkmanReport.user_id == current_user.id).first()
     report_data = report.report_data if report else None
     return recommend(report_data)
+
+
+# ─────────────── 배운 점 기록 (Mission Review) ───────────────
+@router.get("/missions/{mission_id}/review", response_model=MissionReviewResponse)
+def get_mission_review(
+    mission_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _get_own_mission(mission_id, current_user, db)
+    review = (
+        db.query(MissionReview)
+        .filter(MissionReview.mission_id == mission_id)
+        .order_by(MissionReview.created_at.desc())
+        .first()
+    )
+    if not review:
+        raise HTTPException(status_code=404, detail="아직 기록된 회고가 없습니다")
+    return review
+
+
+@router.post("/missions/{mission_id}/review", response_model=MissionReviewResponse)
+def upsert_mission_review(
+    mission_id: int,
+    data: MissionReviewCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    mission = _get_own_mission(mission_id, current_user, db)
+    review = db.query(MissionReview).filter(MissionReview.mission_id == mission_id).first()
+    if review:
+        for k, v in data.model_dump().items():
+            setattr(review, k, v)
+    else:
+        review = MissionReview(mission_id=mission_id, **data.model_dump())
+        db.add(review)
+    # 회고를 남기면 미션을 완료로 간주(아직 done/shared가 아니면 done)
+    if mission.status not in ("done", "shared"):
+        mission.status = "done"
+    db.commit()
+    db.refresh(review)
+    return review
+
+
+# ─────────────── 성장 여정 요약 (본인 전용) ───────────────
+@router.get("/growth", response_model=GrowthSummary)
+def get_growth(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return build_growth(db, current_user.id)

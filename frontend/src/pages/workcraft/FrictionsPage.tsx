@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Lightbulb, Plus, Loader2, Trash2, Target, Repeat, Sparkles, X,
+  Lightbulb, Plus, Loader2, Trash2, Target, Repeat, Sparkles, X, Pencil,
 } from 'lucide-react'
 import {
-  listFrictions, createFriction, deleteFriction, getWorkcraftMeta,
+  listFrictions, createFriction, updateFriction, deleteFriction, getWorkcraftMeta,
 } from '../../services/api'
 import { VisibilitySelector } from '../../components/workcraft/VisibilitySelector'
+import { toast } from '../../store/toastStore'
 import type { WorkFriction, WorkCraftMeta, Visibility } from '../../types'
 
 const EMPTY = {
@@ -21,6 +22,7 @@ export default function FrictionsPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<number | null>(null)
   const [form, setForm] = useState(EMPTY)
 
   const { data: meta } = useQuery<WorkCraftMeta>({ queryKey: ['wc-meta'], queryFn: getWorkcraftMeta })
@@ -28,19 +30,41 @@ export default function FrictionsPage() {
     queryKey: ['frictions'], queryFn: listFrictions,
   })
 
-  const createMut = useMutation({
-    mutationFn: () => createFriction(form),
+  const closeForm = () => { setShowForm(false); setEditingId(null); setForm(EMPTY) }
+
+  const saveMut = useMutation({
+    mutationFn: () => (editingId ? updateFriction(editingId, form) : createFriction(form)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['frictions'] })
-      setForm(EMPTY)
-      setShowForm(false)
+      toast.success(editingId ? '불편함 카드를 수정했어요' : '불편함 카드를 저장했어요')
+      closeForm()
     },
+    onError: () => toast.error('저장에 실패했어요. 다시 시도해주세요'),
   })
 
   const deleteMut = useMutation({
     mutationFn: (id: number) => deleteFriction(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['frictions'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['frictions'] })
+      toast.success('삭제했어요')
+    },
+    onError: () => toast.error('삭제에 실패했어요'),
   })
+
+  const startEdit = (f: WorkFriction) => {
+    setEditingId(f.id)
+    setForm({
+      title: f.title, description: f.description, friction_type: f.friction_type,
+      frequency: f.frequency, expected_effect: f.expected_effect, related_skill: f.related_skill,
+      claude_feasible: f.claude_feasible, visibility: f.visibility,
+    })
+    setShowForm(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const confirmDelete = (f: WorkFriction) => {
+    if (window.confirm(`'${f.title}' 카드를 삭제할까요?`)) deleteMut.mutate(f.id)
+  }
 
   const set = (k: string, v: any) => setForm((p) => ({ ...p, [k]: v }))
 
@@ -60,7 +84,7 @@ export default function FrictionsPage() {
       </motion.div>
 
       {!showForm && (
-        <button onClick={() => setShowForm(true)} className="btn-primary">
+        <button onClick={() => { setEditingId(null); setForm(EMPTY); setShowForm(true) }} className="btn-primary">
           <Plus className="w-4 h-4" /> 불편함 카드 추가
         </button>
       )}
@@ -72,8 +96,8 @@ export default function FrictionsPage() {
             exit={{ opacity: 0, height: 0 }} className="card overflow-hidden"
           >
             <div className="flex items-center justify-between mb-4">
-              <h2 className="section-title">새 불편함 카드</h2>
-              <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600">
+              <h2 className="section-title">{editingId ? '불편함 카드 수정' : '새 불편함 카드'}</h2>
+              <button onClick={closeForm} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -127,9 +151,9 @@ export default function FrictionsPage() {
                 </div>
               </div>
               <div className="flex justify-end gap-2 pt-1">
-                <button onClick={() => setShowForm(false)} className="btn-secondary">취소</button>
-                <button onClick={() => createMut.mutate()} disabled={!form.title || createMut.isPending} className="btn-primary">
-                  {createMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : '저장'}
+                <button onClick={closeForm} className="btn-secondary">취소</button>
+                <button onClick={() => saveMut.mutate()} disabled={!form.title || saveMut.isPending} className="btn-primary">
+                  {saveMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : (editingId ? '수정' : '저장')}
                 </button>
               </div>
             </div>
@@ -157,10 +181,14 @@ export default function FrictionsPage() {
                 <span className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 bg-brand-50 px-2.5 py-1 rounded-full">
                   {f.friction_type}
                 </span>
-                <button onClick={() => deleteMut.mutate(f.id)}
-                  className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => startEdit(f)} className="text-slate-300 hover:text-brand-500" title="수정">
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => confirmDelete(f)} className="text-slate-300 hover:text-red-500" title="삭제">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
               <h3 className="font-semibold text-slate-900 mb-1.5">{f.title}</h3>
               {f.description && <p className="text-sm text-slate-500 mb-3 line-clamp-2">{f.description}</p>}

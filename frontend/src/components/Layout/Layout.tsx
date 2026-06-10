@@ -3,7 +3,7 @@ import { useAuthStore } from '../../store/authStore'
 import {
   LayoutDashboard, ClipboardList, FileBarChart, Users,
   Settings, LogOut, FlaskConical, Lightbulb, Target,
-  KanbanSquare, Share2, CalendarDays, Library, LifeBuoy, BarChart3,
+  KanbanSquare, Share2, CalendarDays, Library, LifeBuoy, BarChart3, Sprout,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
@@ -20,6 +20,7 @@ const workcraftNav = [
   { to: '/workcraft/missions/new',   label: '미션 만들기',   icon: Target },
   { to: '/workcraft/board',          label: '내 미션 보드',  icon: KanbanSquare },
   { to: '/workcraft/calendar',       label: '캘린더',        icon: CalendarDays },
+  { to: '/workcraft/growth',         label: '성장 여정',     icon: Sprout },
   { to: '/workcraft/templates',      label: '템플릿',        icon: Library },
   { to: '/workcraft/support',        label: '지원 요청',     icon: LifeBuoy },
 ]

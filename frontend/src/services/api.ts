@@ -76,6 +76,13 @@ export const getMissionPrompt = (missionId: number) =>
 
 export const getRecommendations = () => api.get('/workcraft/recommendations').then((r) => r.data)
 
+// WorkCraft - review & growth
+export const getMissionReview = (missionId: number) =>
+  api.get(`/workcraft/missions/${missionId}/review`).then((r) => r.data)
+export const saveMissionReview = (missionId: number, data: any) =>
+  api.post(`/workcraft/missions/${missionId}/review`, data).then((r) => r.data)
+export const getGrowth = () => api.get('/workcraft/growth').then((r) => r.data)
+
 // WorkCraft - templates & support
 export const listTemplates = () => api.get('/workcraft/templates').then((r) => r.data)
 export const shareTemplate = (data: any) => api.post('/workcraft/templates/share', data).then((r) => r.data)

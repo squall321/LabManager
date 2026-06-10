@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { LifeBuoy, Loader2, Send, Sparkles, CheckCircle2, Clock } from 'lucide-react'
 import { createSupportRequest, mySupportRequests } from '../../services/api'
+import { toast } from '../../store/toastStore'
 import type { SupportRequest } from '../../types'
 
 const REQUEST_TYPES = [
@@ -22,8 +23,10 @@ export default function SupportRequestPage() {
     mutationFn: () => createSupportRequest(form),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-support'] })
+      toast.success('요청을 보냈어요. 파트장이 익명 집계로 확인해요')
       setForm({ request_type: '샘플 코드', description: '', anonymous: true })
     },
+    onError: () => toast.error('요청 전송에 실패했어요'),
   })
 
   const set = (k: string, v: any) => setForm((p) => ({ ...p, [k]: v }))

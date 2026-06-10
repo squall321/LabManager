@@ -5,6 +5,7 @@ import {
   Library, Loader2, Plus, Sparkles, X, Copy, Check, EyeOff, UserCircle2, FileCode2, Target,
 } from 'lucide-react'
 import { listTemplates, shareTemplate, listMissions } from '../../services/api'
+import { toast } from '../../store/toastStore'
 import type { SharedTemplate, GrowthMission } from '../../types'
 
 export default function TemplateLibraryPage() {
@@ -25,9 +26,12 @@ export default function TemplateLibraryPage() {
     mutationFn: () => shareTemplate(form),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['templates'] })
+      queryClient.invalidateQueries({ queryKey: ['growth'] })
+      toast.success('템플릿을 공유했어요. 동료에게 도움이 될 거예요 ✨')
       setShowForm(false)
       setForm({ source_type: 'mission', source_id: null, title: '', category: '', description: '', anonymized: true })
     },
+    onError: () => toast.error('공유에 실패했어요'),
   })
 
   const set = (k: string, v: any) => setForm((p) => ({ ...p, [k]: v }))
