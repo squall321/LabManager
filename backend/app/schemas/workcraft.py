@@ -117,6 +117,47 @@ class ClaudePromptResponse(BaseModel):
         from_attributes = True
 
 
+# ── Shared Template ──
+class TemplateShareRequest(BaseModel):
+    source_type: str = "mission"        # mission | prompt
+    source_id: Optional[int] = None
+    title: str
+    category: str = ""
+    description: str = ""
+    body: str = ""
+    anonymized: bool = True
+
+
+class TemplateResponse(BaseModel):
+    id: int
+    title: str
+    category: str
+    description: str
+    body: str
+    source_type: str
+    owner_name: str                     # 익명이면 "익명"
+    created_at: datetime
+
+
+# ── Support Request ──
+class SupportRequestCreate(BaseModel):
+    request_type: str = ""
+    description: str = ""
+    anonymous: bool = True
+
+
+class SupportRequestResponse(BaseModel):
+    id: int
+    request_type: str
+    description: str
+    anonymous: bool
+    status: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # ── Recommendation (Birkman 연계) ──
 class RecommendationItem(BaseModel):
     title: str

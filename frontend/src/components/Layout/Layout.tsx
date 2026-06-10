@@ -3,7 +3,7 @@ import { useAuthStore } from '../../store/authStore'
 import {
   LayoutDashboard, ClipboardList, FileBarChart, Users,
   Settings, LogOut, FlaskConical, Lightbulb, Target,
-  KanbanSquare, Share2, CalendarDays,
+  KanbanSquare, Share2, CalendarDays, Library, LifeBuoy, BarChart3,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
@@ -20,6 +20,8 @@ const workcraftNav = [
   { to: '/workcraft/missions/new',   label: '미션 만들기',   icon: Target },
   { to: '/workcraft/board',          label: '내 미션 보드',  icon: KanbanSquare },
   { to: '/workcraft/calendar',       label: '캘린더',        icon: CalendarDays },
+  { to: '/workcraft/templates',      label: '템플릿',        icon: Library },
+  { to: '/workcraft/support',        label: '지원 요청',     icon: LifeBuoy },
 ]
 
 const modules = [
@@ -103,6 +105,28 @@ export function Layout() {
               {item.label}
             </NavLink>
           ))}
+
+          {activeModule === 'workcraft' && user?.is_part_leader && (
+            <>
+              <div className="pt-3 pb-1 px-3">
+                <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">파트장</div>
+              </div>
+              <NavLink
+                to="/workcraft/leader"
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150',
+                    isActive
+                      ? 'bg-brand-50 text-brand-700 shadow-sm'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  )
+                }
+              >
+                <BarChart3 className="w-[18px] h-[18px]" />
+                익명 대시보드
+              </NavLink>
+            </>
+          )}
 
           {user?.is_admin && (
             <>

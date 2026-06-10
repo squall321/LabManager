@@ -13,11 +13,17 @@ import MissionBuilderPage from './pages/workcraft/MissionBuilderPage'
 import ActionBoardPage from './pages/workcraft/ActionBoardPage'
 import CalendarPage from './pages/workcraft/CalendarPage'
 import PromptStudioPage from './pages/workcraft/PromptStudioPage'
+import TemplateLibraryPage from './pages/workcraft/TemplateLibraryPage'
+import SupportRequestPage from './pages/workcraft/SupportRequestPage'
+import LeaderDashboardPage from './pages/workcraft/LeaderDashboardPage'
 
-function ProtectedRoute({ children, adminOnly = false }: { children: JSX.Element; adminOnly?: boolean }) {
+function ProtectedRoute({
+  children, adminOnly = false, leaderOnly = false,
+}: { children: JSX.Element; adminOnly?: boolean; leaderOnly?: boolean }) {
   const { token, user } = useAuthStore()
   if (!token) return <Navigate to="/login" replace />
   if (adminOnly && !user?.is_admin) return <Navigate to="/" replace />
+  if (leaderOnly && !user?.is_part_leader) return <Navigate to="/workcraft/frictions" replace />
   return children
 }
 
@@ -46,7 +52,17 @@ export default function App() {
           <Route path="/workcraft/missions/new" element={<MissionBuilderPage />} />
           <Route path="/workcraft/board" element={<ActionBoardPage />} />
           <Route path="/workcraft/calendar" element={<CalendarPage />} />
+          <Route path="/workcraft/templates" element={<TemplateLibraryPage />} />
+          <Route path="/workcraft/support" element={<SupportRequestPage />} />
           <Route path="/workcraft/missions/:missionId/prompt" element={<PromptStudioPage />} />
+          <Route
+            path="/workcraft/leader"
+            element={
+              <ProtectedRoute leaderOnly>
+                <LeaderDashboardPage />
+              </ProtectedRoute>
+            }
+          />
 
           <Route
             path="/admin"

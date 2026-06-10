@@ -104,15 +104,17 @@ class MissionReview(Base):
 
 
 class SharedTemplate(Base):
-    """공유 템플릿 (Phase 2) — 모델은 미리 정의"""
+    """공유 템플릿 — 좋은 미션/프롬프트를 조직 학습 자산으로"""
     __tablename__ = "shared_templates"
 
     id = Column(Integer, primary_key=True, index=True)
-    source_type = Column(String, nullable=False)   # mission | prompt | review
-    source_id = Column(Integer, nullable=False)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)  # 익명이면 표시 안 함
+    source_type = Column(String, nullable=False)   # mission | prompt
+    source_id = Column(Integer, nullable=True)
     title = Column(String, nullable=False)
     category = Column(String, default="")
     description = Column(Text, default="")
+    body = Column(Text, default="")                 # 템플릿 본문(프롬프트 등)
     anonymized = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 

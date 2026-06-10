@@ -76,6 +76,17 @@ export const getMissionPrompt = (missionId: number) =>
 
 export const getRecommendations = () => api.get('/workcraft/recommendations').then((r) => r.data)
 
+// WorkCraft - templates & support
+export const listTemplates = () => api.get('/workcraft/templates').then((r) => r.data)
+export const shareTemplate = (data: any) => api.post('/workcraft/templates/share', data).then((r) => r.data)
+export const createSupportRequest = (data: any) =>
+  api.post('/workcraft/support-requests', data).then((r) => r.data)
+export const mySupportRequests = () => api.get('/workcraft/support-requests/mine').then((r) => r.data)
+
+// WorkCraft - leader (part_leader only)
+export const getLeaderTrends = () => api.get('/leader/anonymous-trends').then((r) => r.data)
+export const getLeaderSupportRequests = () => api.get('/leader/support-requests').then((r) => r.data)
+
 // Admin
 export const getAdminStats = () => api.get('/admin/stats').then((r) => r.data)
 export const getAdminUsers = () => api.get('/admin/users').then((r) => r.data)

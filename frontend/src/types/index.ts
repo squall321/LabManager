@@ -175,3 +175,62 @@ export interface WorkCraftMeta {
   visibility_values: Visibility[]
   mission_statuses: MissionStatus[]
 }
+
+export interface SharedTemplate {
+  id: number
+  title: string
+  category: string
+  description: string
+  body: string
+  source_type: string
+  owner_name: string
+  created_at: string
+}
+
+export interface SupportRequest {
+  id: number
+  request_type: string
+  description: string
+  anonymous: boolean
+  status: string
+  created_at: string
+}
+
+// ── Leader (anonymous aggregates only) ──
+export interface FrictionTrend {
+  category: string
+  contributors: number | null
+  progress: number
+  min_n: number
+  visible: boolean
+}
+
+export interface SupportTrend {
+  type: string
+  count: number
+}
+
+export interface LeaderTotals {
+  total_frictions: number
+  total_missions: number
+  completed_missions: number
+  generated_prompts: number
+  shared_templates: number
+  participants: number
+}
+
+export interface LeaderDashboard {
+  anonymity_min_n: number
+  totals: LeaderTotals
+  friction_trends: FrictionTrend[]
+  support_trends: SupportTrend[]
+}
+
+export interface LeaderSupportItem {
+  id: number
+  request_type: string
+  description: string
+  requester: string
+  status: string
+  created_at: string
+}
