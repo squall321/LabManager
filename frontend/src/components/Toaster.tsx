@@ -11,7 +11,7 @@ const ICON = {
 export function Toaster() {
   const { toasts, remove } = useToastStore()
   return (
-    <div className="fixed top-5 right-5 z-[100] flex flex-col gap-2 w-[320px] pointer-events-none">
+    <div aria-live="polite" aria-atomic="true" className="fixed top-5 right-5 z-[100] flex flex-col gap-2 w-[320px] pointer-events-none">
       <AnimatePresence>
         {toasts.map((t) => {
           const cfg = ICON[t.type]
@@ -27,7 +27,7 @@ export function Toaster() {
             >
               <cfg.icon className={`w-5 h-5 flex-shrink-0 mt-0.5 ${cfg.color}`} />
               <p className="flex-1 text-sm text-slate-700 leading-snug">{t.message}</p>
-              <button onClick={() => remove(t.id)} className="text-slate-300 hover:text-slate-500">
+              <button onClick={() => remove(t.id)} aria-label="알림 닫기" className="text-slate-300 hover:text-slate-500">
                 <X className="w-4 h-4" />
               </button>
             </motion.div>

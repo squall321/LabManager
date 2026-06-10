@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -31,6 +31,14 @@ export default function ActionBoardPage() {
   const [dragId, setDragId] = useState<number | null>(null)
   const [overCol, setOverCol] = useState<MissionStatus | null>(null)
   const [detail, setDetail] = useState<GrowthMission | null>(null)
+
+  // 모달: ESC로 닫기
+  useEffect(() => {
+    if (!detail) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setDetail(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [detail])
 
   const { data: missions, isLoading } = useQuery<GrowthMission[]>({
     queryKey: ['missions'], queryFn: listMissions,
@@ -188,6 +196,7 @@ export default function ActionBoardPage() {
             onClick={() => setDetail(null)}
           >
             <motion.div
+              role="dialog" aria-modal="true" aria-label={`미션 상세: ${detail.title}`}
               className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[85vh] overflow-y-auto"
               initial={{ scale: 0.95, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
@@ -197,7 +206,7 @@ export default function ActionBoardPage() {
                   <div className="text-xs text-slate-400 mb-1">미션 상세</div>
                   <h2 className="text-lg font-bold text-slate-900">{detail.title}</h2>
                 </div>
-                <button onClick={() => setDetail(null)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+                <button onClick={() => setDetail(null)} aria-label="닫기" className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
               </div>
               <div className="p-5 space-y-3.5">
                 {(detail.start_date || detail.due_date) && (

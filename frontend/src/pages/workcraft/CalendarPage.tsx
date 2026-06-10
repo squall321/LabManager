@@ -93,10 +93,10 @@ export default function CalendarPage() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="section-title">{year}년 {month + 1}월</h2>
               <div className="flex items-center gap-1">
-                <button onClick={prevMonth} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500"><ChevronLeft className="w-4 h-4" /></button>
+                <button onClick={prevMonth} aria-label="이전 달" className="p-2 rounded-lg hover:bg-slate-100 text-slate-500"><ChevronLeft className="w-4 h-4" /></button>
                 <button onClick={() => { setYear(now.getFullYear()); setMonth(now.getMonth()) }}
                   className="px-3 py-1.5 text-sm font-medium rounded-lg hover:bg-slate-100 text-slate-600">오늘</button>
-                <button onClick={nextMonth} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500"><ChevronRight className="w-4 h-4" /></button>
+                <button onClick={nextMonth} aria-label="다음 달" className="p-2 rounded-lg hover:bg-slate-100 text-slate-500"><ChevronRight className="w-4 h-4" /></button>
               </div>
             </div>
 
