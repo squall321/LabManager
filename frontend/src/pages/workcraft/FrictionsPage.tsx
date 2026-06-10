@@ -81,6 +81,10 @@ export default function FrictionsPage() {
           반복되거나 답답한 업무를 부담 없이 적어보세요. 여기 적은 내용은 <b>본인만</b> 볼 수 있고,
           공유 범위는 언제나 직접 정합니다. 작은 불편함이 곧 성장 미션의 출발점이 됩니다.
         </p>
+        <p className="text-xs text-slate-400 mt-2 max-w-2xl leading-relaxed">
+          ℹ️ 내용과 이름은 누구에게도 공개되지 않습니다. 다만 어떤 <b>유형</b>의 불편함이 많은지에 대한
+          익명 집계는(같은 유형을 <b>5명 이상</b>이 적었을 때만, 내용·이름 제외) 파트장이 공통 지원을 마련하는 데 쓰일 수 있어요.
+        </p>
       </motion.div>
 
       {!showForm && (

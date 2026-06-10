@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import {
-  CalendarDays, Loader2, ChevronLeft, ChevronRight, Sparkles, Flag, CircleDot,
+  CalendarDays, Loader2, ChevronLeft, ChevronRight, Sparkles, Flag, CircleDot, CalendarClock,
 } from 'lucide-react'
 import { listMissions } from '../../services/api'
 import type { GrowthMission, MissionStatus } from '../../types'
@@ -48,6 +48,12 @@ export default function CalendarPage() {
       .sort((a, b) => a.due_date.localeCompare(b.due_date))
       .slice(0, 8)
   }, [missions])
+
+  // 마감일이 없어 달력에 안 보이는 진행 중 미션
+  const unscheduled = useMemo(
+    () => (missions ?? []).filter((m) => !m.due_date && m.status !== 'done' && m.status !== 'shared'),
+    [missions],
+  )
 
   const firstWeekday = new Date(year, month, 1).getDay()
   const daysInMonth = new Date(year, month + 1, 0).getDate()
@@ -146,6 +152,25 @@ export default function CalendarPage() {
                     </div>
                   </button>
                 ))}
+              </div>
+            )}
+
+            {/* 일정 미지정 미션 */}
+            {unscheduled.length > 0 && (
+              <div className="mt-5 pt-4 border-t border-slate-100">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 mb-2">
+                  <CalendarClock className="w-3.5 h-3.5" /> 일정 미지정 ({unscheduled.length})
+                </div>
+                <div className="space-y-1.5">
+                  {unscheduled.slice(0, 6).map((m) => (
+                    <button key={m.id} onClick={() => navigate(`/workcraft/missions/${m.id}/edit`)}
+                      className="w-full text-left flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-slate-50 transition-colors">
+                      <CircleDot className="w-3 h-3 flex-shrink-0" style={{ color: STATUS_COLOR[m.status] }} />
+                      <span className="text-sm text-slate-600 truncate flex-1">{m.title}</span>
+                      <span className="text-[11px] text-brand-500">날짜 지정 →</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
