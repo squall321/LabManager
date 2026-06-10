@@ -18,14 +18,17 @@ export default function MissionBuilderPage() {
   const sharedFriction = (location.state as any)?.sharedFriction as
     | { id: number; title: string; description: string; related_skill: string; owner_name: string }
     | undefined
+  const template = (location.state as any)?.template as
+    | { title: string; description: string; body: string }
+    | undefined
 
   const seed = friction ?? sharedFriction
   const [form, setForm] = useState({
-    title: seed ? `${seed.title} 개선` : '',
-    problem: (friction?.description || sharedFriction?.description) ?? '',
+    title: template ? template.title : seed ? `${seed.title} 개선` : '',
+    problem: (friction?.description || sharedFriction?.description || template?.description) ?? '',
     goal: '',
     output: '',
-    scope: '',
+    scope: template?.body ?? '',
     success_criteria: '',
     deadline: '',
     learning_goal: (friction?.related_skill || sharedFriction?.related_skill) ?? '',
@@ -99,6 +102,14 @@ export default function MissionBuilderPage() {
               <p className="text-sm text-brand-800">
                 <b>{sharedFriction.owner_name}</b>님이 공유한 불편함에서 시작합니다.
                 동료의 문제를 함께 풀어보는 미션이에요.
+              </p>
+            </div>
+          )}
+          {template && (
+            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+              <Sparkles className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-emerald-800">
+                공유 템플릿 <b>{template.title}</b>에서 시작합니다. 내용을 내 상황에 맞게 다듬어보세요.
               </p>
             </div>
           )}

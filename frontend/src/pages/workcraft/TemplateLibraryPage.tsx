@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -9,6 +10,7 @@ import { toast } from '../../store/toastStore'
 import type { SharedTemplate, GrowthMission } from '../../types'
 
 export default function TemplateLibraryPage() {
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [showForm, setShowForm] = useState(false)
   const [copiedId, setCopiedId] = useState<number | null>(null)
@@ -140,9 +142,19 @@ export default function TemplateLibraryPage() {
               {t.body && (
                 <pre className="text-[11px] bg-slate-50 border border-slate-100 rounded-lg p-3 text-slate-600 max-h-32 overflow-hidden whitespace-pre-wrap mb-3">{t.body}</pre>
               )}
-              <button onClick={() => copy(t)} className="btn-secondary text-sm mt-auto">
-                {copiedId === t.id ? <><Check className="w-4 h-4" /> 복사됨</> : <><Copy className="w-4 h-4" /> 내용 복사</>}
-              </button>
+              <div className="flex gap-2 mt-auto">
+                <button onClick={() => copy(t)} className="btn-secondary text-sm flex-1">
+                  {copiedId === t.id ? <><Check className="w-4 h-4" /> 복사됨</> : <><Copy className="w-4 h-4" /> 복사</>}
+                </button>
+                <button
+                  onClick={() => navigate('/workcraft/missions/new', {
+                    state: { template: { title: t.title, description: t.description, body: t.body } },
+                  })}
+                  className="btn-primary text-sm flex-1"
+                >
+                  <Target className="w-4 h-4" /> 미션 만들기
+                </button>
+              </div>
             </motion.div>
           ))}
         </div>
