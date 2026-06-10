@@ -212,7 +212,7 @@ export default function SurveyPage() {
       </AnimatePresence>
 
       {/* Footer actions */}
-      <div className="sticky bottom-0 mt-6 -mx-8 px-8 py-4 bg-gradient-to-t from-slate-50 via-slate-50 to-transparent">
+      <div className="sticky bottom-0 mt-6 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-4 bg-gradient-to-t from-slate-50 via-slate-50 to-transparent">
         <div className="flex items-center justify-between">
           <button
             onClick={() => navigate('/')}

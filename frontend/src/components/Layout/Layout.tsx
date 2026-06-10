@@ -1,9 +1,11 @@
+import { useState, useEffect } from 'react'
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import {
   LayoutDashboard, ClipboardList, FileBarChart, Users,
   Settings, LogOut, FlaskConical, Lightbulb, Target,
   KanbanSquare, Share2, CalendarDays, Library, LifeBuoy, BarChart3, Sprout,
+  Menu, X,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
@@ -26,27 +28,59 @@ const workcraftNav = [
 ]
 
 const modules = [
-  { key: 'birkman',   label: 'Birkman Workshop', home: '/',                    short: 'BW' },
-  { key: 'workcraft', label: 'WorkCraft Studio',  home: '/workcraft/frictions', short: 'WS' },
+  { key: 'birkman',   home: '/',                    short: 'BW' },
+  { key: 'workcraft', home: '/workcraft/frictions', short: 'WS' },
 ]
+
+const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+  cn(
+    'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150',
+    isActive ? 'bg-brand-50 text-brand-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+  )
 
 export function Layout() {
   const { user, clearAuth } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
+  const [open, setOpen] = useState(false)
 
   const activeModule = location.pathname.startsWith('/workcraft') ? 'workcraft' : 'birkman'
   const nav = activeModule === 'workcraft' ? workcraftNav : birkmanNav
+
+  // 라우트 변경 시 모바일 드로어 닫기
+  useEffect(() => { setOpen(false) }, [location.pathname])
 
   const handleLogout = () => {
     clearAuth()
     navigate('/login')
   }
+  const close = () => setOpen(false)
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
-      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col fixed h-screen">
-        <div className="px-6 py-5 border-b border-slate-100">
+    <div className="min-h-screen bg-slate-50">
+      {/* Mobile top bar */}
+      <div className="lg:hidden sticky top-0 z-30 flex items-center gap-3 bg-white border-b border-slate-200 px-4 h-14">
+        <button onClick={() => setOpen(true)} className="p-2 -ml-2 text-slate-600 hover:text-slate-900" aria-label="메뉴 열기">
+          <Menu className="w-5 h-5" />
+        </button>
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
+            <FlaskConical className="w-4 h-4 text-white" />
+          </div>
+          <span className="font-bold text-slate-900">LabManager</span>
+        </div>
+      </div>
+
+      {/* Overlay (mobile) */}
+      {open && <div className="lg:hidden fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm" onClick={close} />}
+
+      {/* Sidebar */}
+      <aside className={cn(
+        'fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 flex flex-col h-screen',
+        'transform transition-transform duration-200 lg:translate-x-0',
+        open ? 'translate-x-0' : '-translate-x-full'
+      )}>
+        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-glow-sm">
               <FlaskConical className="w-5 h-5 text-white" />
@@ -56,6 +90,9 @@ export function Layout() {
               <div className="text-[11px] text-slate-400 font-medium">People &amp; Growth</div>
             </div>
           </div>
+          <button onClick={close} className="lg:hidden p-1 text-slate-400 hover:text-slate-600" aria-label="메뉴 닫기">
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Module switcher */}
@@ -64,12 +101,10 @@ export function Layout() {
             {modules.map((m) => (
               <button
                 key={m.key}
-                onClick={() => navigate(m.home)}
+                onClick={() => { navigate(m.home); close() }}
                 className={cn(
                   'flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-all',
-                  activeModule === m.key
-                    ? 'bg-white text-brand-700 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-700'
+                  activeModule === m.key ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                 )}
               >
                 <span className={cn(
@@ -82,26 +117,14 @@ export function Layout() {
           </div>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           <div className="pb-1 px-3">
             <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
               {activeModule === 'workcraft' ? 'WorkCraft Studio' : 'Birkman Workshop'}
             </div>
           </div>
           {nav.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/'}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150',
-                  isActive
-                    ? 'bg-brand-50 text-brand-700 shadow-sm'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                )
-              }
-            >
+            <NavLink key={item.to} to={item.to} end={item.to === '/'} onClick={close} className={navLinkClass}>
               <item.icon className="w-[18px] h-[18px]" />
               {item.label}
             </NavLink>
@@ -112,17 +135,7 @@ export function Layout() {
               <div className="pt-3 pb-1 px-3">
                 <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">파트장</div>
               </div>
-              <NavLink
-                to="/workcraft/leader"
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150',
-                    isActive
-                      ? 'bg-brand-50 text-brand-700 shadow-sm'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                  )
-                }
-              >
+              <NavLink to="/workcraft/leader" onClick={close} className={navLinkClass}>
                 <BarChart3 className="w-[18px] h-[18px]" />
                 익명 대시보드
               </NavLink>
@@ -134,17 +147,7 @@ export function Layout() {
               <div className="pt-3 pb-1 px-3">
                 <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">관리</div>
               </div>
-              <NavLink
-                to="/admin"
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150',
-                    isActive
-                      ? 'bg-brand-50 text-brand-700 shadow-sm'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                  )
-                }
-              >
+              <NavLink to="/admin" onClick={close} className={navLinkClass}>
                 <Settings className="w-[18px] h-[18px]" />
                 관리자
               </NavLink>
@@ -169,8 +172,9 @@ export function Layout() {
         </div>
       </aside>
 
-      <main className="flex-1 ml-64">
-        <div className="max-w-6xl mx-auto px-8 py-8">
+      {/* Main */}
+      <main className="lg:ml-64">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
           <Outlet />
         </div>
       </main>
