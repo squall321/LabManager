@@ -16,6 +16,7 @@ class UserSetPassword(BaseModel):
     email: str
     password: str
     confirm_password: str
+    signup_code: Optional[str] = None
 
 
 class UserLogin(BaseModel):

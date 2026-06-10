@@ -23,8 +23,10 @@ api.interceptors.response.use(
 export const checkEmail = (email: string) =>
   api.post('/auth/check-email', { email }).then((r) => r.data)
 
-export const setPassword = (email: string, password: string, confirm_password: string) =>
-  api.post('/auth/set-password', { email, password, confirm_password }).then((r) => r.data)
+export const setPassword = (
+  email: string, password: string, confirm_password: string, signup_code?: string,
+) =>
+  api.post('/auth/set-password', { email, password, confirm_password, signup_code }).then((r) => r.data)
 
 export const login = (email: string, password: string) =>
   api.post('/auth/login', { email, password }).then((r) => r.data)

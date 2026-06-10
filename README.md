@@ -42,6 +42,8 @@ LabManager/
 복잡한 점수 계산은 C++로 구현하고 `pybind11`로 Python에 바인딩합니다.
 [birkman_engine.py](backend/app/services/birkman_engine.py)는 C++ 모듈(`birkman_calc`)이 빌드되어 있으면 이를 사용하고, 없으면 **동일 알고리즘의 Python 구현으로 자동 fallback**합니다. 따라서 C++ 빌드 없이도 즉시 동작합니다.
 
+> **C++ 모듈 현재 상태:** 기본 배포에서는 **빌드되지 않은 참조 구현**이며(`USE_CPP=False`), 실제 채점은 Python 경로로 수행·검증됩니다. C++은 동일 가중치를 인자로 받아 같은 결과를 내도록 작성돼 있으나, 성능 가속이 필요할 때 선택적으로 빌드하는 용도입니다.
+
 ---
 
 ## 🚀 실행 방법

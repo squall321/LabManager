@@ -220,6 +220,12 @@ export default function ReportPage() {
           </motion.div>
         ))}
       </div>
+
+      {/* 모델 고지 */}
+      <p className="text-xs text-slate-400 text-center pt-2 leading-relaxed">
+        이 리포트는 워크숍·자기이해를 돕기 위한 <b>자체 성향 모델</b>로 산출되었습니다.
+        공식 Birkman Method®의 진단 결과와는 다를 수 있으며, 평가나 선발의 근거가 아닙니다.
+      </p>
     </div>
   )
 }

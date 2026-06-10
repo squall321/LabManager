@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from ..core.database import get_db
 from ..core.security import create_access_token
+from ..core.config import settings
 from ..schemas.user import UserLogin, UserSetPassword, Token, UserResponse
 from ..services.auth_service import authenticate_user, get_user_by_email, set_user_password
 from .deps import get_current_user
@@ -38,12 +39,21 @@ def check_email(body: dict, db: Session = Depends(get_db)):
     user = get_user_by_email(db, email)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="등록되지 않은 이메일입니다")
-    return {"exists": True, "password_set": user.password_set, "name": user.name}
+    return {
+        "exists": True,
+        "password_set": user.password_set,
+        "name": user.name,
+        # 첫 로그인(비번 미설정)이고 가입 코드가 설정돼 있으면 코드 입력 요구
+        "signup_required": (not user.password_set) and bool(settings.SIGNUP_CODE),
+    }
 
 
 @router.post("/set-password")
 def set_password(form: UserSetPassword, db: Session = Depends(get_db)):
     """최초 로그인 시 비밀번호 설정"""
+    # 조직 가입 코드 검증 (설정된 경우에만) — 이메일만으로 계정 선점 방지
+    if settings.SIGNUP_CODE and (form.signup_code or "") != settings.SIGNUP_CODE:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="가입 코드가 올바르지 않습니다")
     if form.password != form.confirm_password:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="비밀번호가 일치하지 않습니다")
     if len(form.password) < 8:

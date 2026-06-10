@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { FlaskConical, Mail, Lock, ArrowRight, ShieldCheck, Loader2 } from 'lucide-react'
+import { FlaskConical, Mail, Lock, ArrowRight, ShieldCheck, Loader2, KeyRound } from 'lucide-react'
 import { checkEmail, login, setPassword } from '../services/api'
 import { useAuthStore } from '../store/authStore'
 
@@ -16,6 +16,8 @@ export default function LoginPage() {
   const [name, setName] = useState('')
   const [password, setPwd] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [signupCode, setSignupCode] = useState('')
+  const [signupRequired, setSignupRequired] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -26,6 +28,7 @@ export default function LoginPage() {
     try {
       const res = await checkEmail(email)
       setName(res.name)
+      setSignupRequired(!!res.signup_required)
       setStep(res.password_set ? 'login' : 'set-password')
     } catch (err: any) {
       setError(err.response?.data?.detail || '오류가 발생했습니다')
@@ -60,9 +63,13 @@ export default function LoginPage() {
       setError('비밀번호는 8자 이상이어야 합니다')
       return
     }
+    if (signupRequired && !signupCode) {
+      setError('가입 코드를 입력해주세요')
+      return
+    }
     setLoading(true)
     try {
-      const res = await setPassword(email, password, confirm)
+      const res = await setPassword(email, password, confirm, signupCode)
       setAuth(res.access_token, res.user)
       navigate('/')
     } catch (err: any) {
@@ -204,7 +211,7 @@ export default function LoginPage() {
                       className="input-field pl-11"
                     />
                   </div>
-                  <div className="relative mb-4">
+                  <div className={`relative ${signupRequired ? 'mb-3' : 'mb-4'}`}>
                     <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-slate-400" />
                     <input
                       type="password"
@@ -215,6 +222,19 @@ export default function LoginPage() {
                       className="input-field pl-11"
                     />
                   </div>
+                  {signupRequired && (
+                    <div className="relative mb-4">
+                      <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-slate-400" />
+                      <input
+                        type="text"
+                        required
+                        value={signupCode}
+                        onChange={(e) => setSignupCode(e.target.value)}
+                        placeholder="가입 코드 (관리자에게 문의)"
+                        className="input-field pl-11"
+                      />
+                    </div>
+                  )}
                   {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
                   <button type="submit" disabled={loading} className="btn-primary w-full mb-3">
                     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : '비밀번호 설정 후 시작'}
