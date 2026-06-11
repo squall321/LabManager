@@ -83,6 +83,56 @@ export interface SurveySection {
   scale_labels: string[]
 }
 
+// ── Assessments (재사용 진단) ──
+export interface AssessmentInstrument {
+  key: string
+  name: string
+  subtitle: string
+  scope: 'individual' | 'team'
+  item_count: number
+  completed: boolean
+}
+
+export interface AssessmentItem {
+  id: number
+  text: string
+  subscale: string
+  reverse: boolean
+}
+
+export interface AssessmentDetail {
+  key: string
+  name: string
+  subtitle: string
+  scope: 'individual' | 'team'
+  scale_labels: string[]
+  subscales: Record<string, string>
+  items: AssessmentItem[]
+}
+
+export interface Band { label: string; text: string }
+export interface SubscaleScore { name: string; score: number; band: Band }
+
+export interface AssessmentResult {
+  instrument_key: string
+  instrument_name: string
+  scope: 'individual' | 'team'
+  overall: number
+  overall_band: Band
+  subscales: Record<string, SubscaleScore>
+}
+
+export interface TeamAggregate {
+  visible: boolean
+  n: number
+  min_n: number
+  instrument_name: string
+  overall?: number
+  overall_band?: Band
+  subscales?: Record<string, SubscaleScore>
+  item_means?: { id: number; text: string; mean: number }[]
+}
+
 export interface SurveyStatus {
   has_survey: boolean
   id?: number

@@ -5,15 +5,16 @@ import {
   LayoutDashboard, ClipboardList, FileBarChart, Users,
   Settings, LogOut, FlaskConical, Lightbulb, Target,
   KanbanSquare, Share2, CalendarDays, Library, LifeBuoy, BarChart3, Sprout,
-  Menu, X,
+  Menu, X, ClipboardCheck,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
 const birkmanNav = [
-  { to: '/',       label: '대시보드',   icon: LayoutDashboard },
-  { to: '/survey', label: '버크만 설문', icon: ClipboardList },
-  { to: '/report', label: '내 리포트',   icon: FileBarChart },
-  { to: '/team',   label: '팀 리포트',   icon: Users },
+  { to: '/',            label: '대시보드',   icon: LayoutDashboard },
+  { to: '/survey',      label: '버크만 설문', icon: ClipboardList },
+  { to: '/report',      label: '내 리포트',   icon: FileBarChart },
+  { to: '/team',        label: '팀 리포트',   icon: Users },
+  { to: '/assessments', label: '진단',        icon: ClipboardCheck },
 ]
 
 const workcraftNav = [

@@ -23,6 +23,10 @@ const SupportRequestPage = lazy(() => import('./pages/workcraft/SupportRequestPa
 const LeaderDashboardPage = lazy(() => import('./pages/workcraft/LeaderDashboardPage'))
 const ReviewPage = lazy(() => import('./pages/workcraft/ReviewPage'))
 const MyGrowthPage = lazy(() => import('./pages/workcraft/MyGrowthPage'))
+const AssessmentsHubPage = lazy(() => import('./pages/assessments/AssessmentsHubPage'))
+const AssessmentTakePage = lazy(() => import('./pages/assessments/AssessmentTakePage'))
+const AssessmentResultPage = lazy(() => import('./pages/assessments/AssessmentResultPage'))
+const AssessmentTeamPage = lazy(() => import('./pages/assessments/AssessmentTeamPage'))
 
 function ProtectedRoute({
   children, adminOnly = false, leaderOnly = false,
@@ -61,6 +65,19 @@ export default function App() {
             <Route path="/report" element={<ReportPage />} />
             <Route path="/report/:userId" element={<ReportPage />} />
             <Route path="/team" element={<TeamPage />} />
+
+            {/* Assessments */}
+            <Route path="/assessments" element={<AssessmentsHubPage />} />
+            <Route path="/assessments/:key" element={<AssessmentTakePage />} />
+            <Route path="/assessments/:key/result" element={<AssessmentResultPage />} />
+            <Route
+              path="/assessments/:key/team"
+              element={
+                <ProtectedRoute leaderOnly>
+                  <AssessmentTeamPage />
+                </ProtectedRoute>
+              }
+            />
 
             {/* WorkCraft Studio */}
             <Route path="/workcraft" element={<FrictionsPage />} />

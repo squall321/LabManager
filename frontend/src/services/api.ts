@@ -96,6 +96,17 @@ export const mySupportRequests = () => api.get('/workcraft/support-requests/mine
 export const getLeaderTrends = () => api.get('/leader/anonymous-trends').then((r) => r.data)
 export const getLeaderSupportRequests = () => api.get('/leader/support-requests').then((r) => r.data)
 
+// Assessments
+export const listAssessments = () => api.get('/assessments').then((r) => r.data)
+export const getAssessmentQuestions = (key: string) =>
+  api.get(`/assessments/${key}/questions`).then((r) => r.data)
+export const submitAssessment = (key: string, responses: Record<string, number>) =>
+  api.post(`/assessments/${key}/submit`, { responses }).then((r) => r.data)
+export const getAssessmentResult = (key: string) =>
+  api.get(`/assessments/${key}/result`).then((r) => r.data)
+export const getAssessmentTeam = (key: string) =>
+  api.get(`/assessments/${key}/team`).then((r) => r.data)
+
 // Admin
 export const getAdminStats = () => api.get('/admin/stats').then((r) => r.data)
 export const getAdminUsers = () => api.get('/admin/users').then((r) => r.data)
