@@ -11,6 +11,7 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage'))
 const SurveyPage = lazy(() => import('./pages/SurveyPage'))
 const ReportPage = lazy(() => import('./pages/ReportPage'))
 const TeamPage = lazy(() => import('./pages/TeamPage'))
+const TeamCollabMapPage = lazy(() => import('./pages/TeamCollabMapPage'))
 const AdminPage = lazy(() => import('./pages/AdminPage'))
 const FrictionsPage = lazy(() => import('./pages/workcraft/FrictionsPage'))
 const TeamFrictionsPage = lazy(() => import('./pages/workcraft/TeamFrictionsPage'))
@@ -65,6 +66,7 @@ export default function App() {
             <Route path="/report" element={<ReportPage />} />
             <Route path="/report/:userId" element={<ReportPage />} />
             <Route path="/team" element={<TeamPage />} />
+            <Route path="/team-map" element={<TeamCollabMapPage />} />
 
             {/* Assessments */}
             <Route path="/assessments" element={<AssessmentsHubPage />} />
