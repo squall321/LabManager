@@ -152,7 +152,8 @@ export default function TeamCollabMapPage() {
                           <Lightbulb className="w-4 h-4" /> 내가 동료를 대할 때 의식할 점
                         </div>
                         <p className="text-sm text-slate-600 leading-relaxed">
-                          {myReport.report_data.narrative?.i_adapt}
+                          {myReport.report_data.narrative?.i_adapt
+                            || '협업 스타일 진단을 다시 받으면 더 구체적인 팁이 채워져요.'}
                         </p>
                       </div>
                       <p className="text-xs text-slate-400 mt-3 flex items-center gap-1.5">

@@ -147,7 +147,8 @@ export default function ReportPage() {
         </div>
       </motion.div>
 
-      {/* 함께 일하기 가이드 (협업 배려 포인트) */}
+      {/* 함께 일하기 가이드 (협업 배려 포인트) — 옛 리포트엔 없을 수 있어 가드 */}
+      {(narrative.work_with_me || narrative.i_adapt) && (
       <motion.div
         initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 }}
         className="card border-brand-100 bg-gradient-to-br from-brand-50/50 to-white"
@@ -183,6 +184,7 @@ export default function ReportPage() {
           </div>
         </div>
       </motion.div>
+      )}
 
       {/* Grid + Components */}
       <div className="grid lg:grid-cols-2 gap-6">

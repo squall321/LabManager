@@ -55,8 +55,8 @@ export interface ReportData {
     communication: string
     team_role: string
     growth: string
-    work_with_me: string
-    i_adapt: string
+    work_with_me?: string
+    i_adapt?: string
   }
 }
 
