@@ -20,7 +20,7 @@ export default function TeamPage() {
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
           <Users className="w-6 h-6 text-brand-500" /> 팀 리포트
         </h1>
-        <p className="text-slate-500 mt-1">공개된 동료들의 버크만 성향을 확인해보세요</p>
+        <p className="text-slate-500 mt-1">공개된 동료들의 협업 스타일을 확인해보세요</p>
       </motion.div>
 
       {isLoading ? (

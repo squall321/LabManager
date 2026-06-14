@@ -10,8 +10,9 @@
 
 ```
 LabManager (플랫폼)
-├── Module 1: Birkman Workshop  ← [[birkman#Birkman Workshop 모듈]]  ✅ 완료
-└── Module 2: WorkCraft Studio  ← [[workcraft#WorkCraft Studio 모듈]] ✅ Phase 1·2 완료
+├── Module 1: Birkman Workshop  ← [[birkman#Birkman Workshop 모듈]]     ✅ 완료
+├── Module 2: WorkCraft Studio  ← [[workcraft#WorkCraft Studio 모듈]]  ✅ Phase 1·2 완료
+└── Module 3: Assessments       ← [[assessments#Assessment 프레임워크]] ✅ 완료
 ```
 
 두 모듈은 **같은 플랫폼 인프라를 공유**한다.
@@ -32,6 +33,7 @@ LabManager (플랫폼)
 |---|---|---|---|
 | **Birkman Workshop** | 성향·강점 진단 + 자동 리포트 | [[src/backend/app/services/birkman_engine.py]], [[src/backend/app/services/birkman_data.py]] | ✅ 완료 |
 | **WorkCraft Studio** | 업무 개선 미션 + Claude 실행 명세서 | [[src/backend/app/api/workcraft.py]], [[src/backend/app/services/prompt_builder.py]] | ✅ Phase 1·2 완료 |
+| **Assessments** | 재사용 진단 프레임워크 (심리적 안전감·SDT) | [[src/backend/app/services/assessment_data.py]], [[src/backend/app/services/assessment_engine.py]] | ✅ 완료 |
 
 ---
 
@@ -55,7 +57,7 @@ LabManager (플랫폼)
 
 ---
 
-## 개발 현황 (2026-06-11)
+## 개발 현황 (2026-06-12)
 
 → 전체 진행 현황: [[status#개발 현황]]
 
@@ -67,3 +69,4 @@ LabManager (플랫폼)
 | WorkCraft Phase 1 | ✅ 완료 | — |
 | WorkCraft Phase 2 | ✅ 완료 | — |
 | WorkCraft Phase 3 | ⬜ 미착수 | 배운 점 기록·성장 회고 |
+| **Assessments** | ✅ 완료 | 진단 도구 추가 가능 |

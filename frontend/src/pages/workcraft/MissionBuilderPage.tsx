@@ -190,7 +190,7 @@ export default function MissionBuilderPage() {
                 <Wand2 className="w-5 h-5 text-brand-600" />
                 <h3 className="font-bold text-slate-900">나에게 맞는 추천</h3>
               </div>
-              <div className="text-xs text-slate-400 mb-1">버크만 유형 기반 · 나만 볼 수 있어요</div>
+              <div className="text-xs text-slate-400 mb-1">협업 스타일 기반 · 나만 볼 수 있어요</div>
               <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 bg-brand-100 px-2.5 py-1 rounded-full mb-3">
                 {rec.color_name} · {rec.color_keyword}
               </div>
@@ -227,8 +227,8 @@ export default function MissionBuilderPage() {
           ) : (
             <div className="card text-center">
               <Wand2 className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-              <p className="text-sm text-slate-500 mb-3">버크만 진단을 완료하면 나에게 맞는 미션을 추천해드려요.</p>
-              <button onClick={() => navigate('/survey')} className="btn-secondary text-sm">버크만 진단하기</button>
+              <p className="text-sm text-slate-500 mb-3">협업 스타일 진단을 완료하면 나에게 맞는 미션을 추천해드려요.</p>
+              <button onClick={() => navigate('/survey')} className="btn-secondary text-sm">협업 스타일 진단하기</button>
             </div>
           )}
         </div>

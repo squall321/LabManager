@@ -128,12 +128,18 @@ export default function SurveyPage() {
       <div className="mb-8">
         <div className="flex items-center gap-2 text-brand-600 text-sm font-semibold mb-2">
           <ClipboardList className="w-4 h-4" />
-          Birkman Workshop
+          협업 스타일 워크샵
         </div>
         <h1 className="text-2xl font-bold text-slate-900 mb-1">{section.section_title}</h1>
         <p className="text-slate-500 text-sm">
           섹션 {section.section} / {section.total_sections} · {section.section_subtitle}
         </p>
+        {section.section === 1 && (
+          <p className="text-xs text-slate-400 mt-3 leading-relaxed bg-slate-50 rounded-lg px-3 py-2">
+            본 워크샵은 특정 상용 진단도구의 공식 프로그램이 아니며, 팀 내 협업 방식과 업무 선호를
+            탐색하기 위한 자체 활동입니다. 개인 평가나 인사 판단에 사용하지 않습니다.
+          </p>
+        )}
 
         {/* Progress bar */}
         <div className="mt-5">

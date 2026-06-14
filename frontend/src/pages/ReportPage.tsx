@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import {
   Loader2, Eye, EyeOff, FileBarChart, MessageSquare,
   Heart, AlertTriangle, Users2, Sprout, Lightbulb, ArrowLeft,
+  UserPlus, HeartHandshake,
 } from 'lucide-react'
 import { getMyReport, updateMyVisibility } from '../services/api'
 import api from '../services/api'
@@ -57,7 +58,7 @@ export default function ReportPage() {
         </div>
         <h2 className="text-xl font-bold text-slate-900 mb-2">리포트를 찾을 수 없습니다</h2>
         <p className="text-slate-500 mb-6">
-          {isOwnReport ? '먼저 버크만 설문을 완료해주세요' : '비공개 리포트이거나 존재하지 않습니다'}
+          {isOwnReport ? '먼저 협업 스타일 진단을 완료해주세요' : '비공개 리포트이거나 존재하지 않습니다'}
         </p>
         <button onClick={() => navigate(isOwnReport ? '/survey' : '/team')} className="btn-primary">
           {isOwnReport ? '설문 시작하기' : '팀 리포트로 돌아가기'}
@@ -72,9 +73,9 @@ export default function ReportPage() {
   const narrative = data.narrative
 
   const narrativeSections = [
-    { icon: MessageSquare, title: '평소 행동 (Usual Behavior)', text: narrative.usual_behavior, color: '#6366f1' },
-    { icon: Heart, title: '내면의 욕구 (Needs)', text: narrative.needs, color: '#ec4899' },
-    { icon: AlertTriangle, title: '스트레스 행동 (Stress)', text: narrative.stress_behavior, color: '#f59e0b' },
+    { icon: MessageSquare, title: '겉으로 드러나는 스타일', text: narrative.usual_behavior, color: '#6366f1' },
+    { icon: Heart, title: '편하게 일하기 위한 조건', text: narrative.needs, color: '#ec4899' },
+    { icon: AlertTriangle, title: '삐걱일 때 나타나는 모습', text: narrative.stress_behavior, color: '#f59e0b' },
     { icon: Users2, title: '팀에서의 역할', text: narrative.team_role, color: '#22c55e' },
     { icon: MessageSquare, title: '효과적인 소통법', text: narrative.communication, color: '#3b82f6' },
     { icon: Sprout, title: '성장 포인트', text: narrative.growth, color: '#8b5cf6' },
@@ -100,16 +101,16 @@ export default function ReportPage() {
         <div className="absolute -right-10 -top-10 w-48 h-48 bg-white/15 rounded-full blur-2xl" />
         <div className="relative z-10 flex items-center justify-between flex-wrap gap-4">
           <div>
-            <div className="text-sm font-medium opacity-90 mb-1">{report.user_name}님의 버크만 리포트</div>
+            <div className="text-sm font-medium opacity-90 mb-1">{report.user_name}님의 협업 스타일 리포트</div>
             <h1 className="text-3xl font-bold mb-1.5">{primary.name} · {primary.keyword}</h1>
             {primary.tagline && <p className="text-sm opacity-90 mb-2.5">{primary.tagline}</p>}
             <div className="flex items-center gap-3 text-sm">
               <span className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur px-3 py-1 rounded-full">
-                주 유형 {primary.name}
+                주 스타일 {primary.name}
               </span>
               {secondary.name && (
                 <span className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur px-3 py-1 rounded-full">
-                  보조 유형 {secondary.name}
+                  보조 스타일 {secondary.name}
                 </span>
               )}
             </div>
@@ -146,14 +147,51 @@ export default function ReportPage() {
         </div>
       </motion.div>
 
+      {/* 함께 일하기 가이드 (협업 배려 포인트) */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 }}
+        className="card border-brand-100 bg-gradient-to-br from-brand-50/50 to-white"
+      >
+        <h2 className="section-title mb-1 flex items-center gap-2">
+          <HeartHandshake className="w-5 h-5 text-brand-500" /> 함께 일하기 가이드
+        </h2>
+        <p className="text-sm text-slate-500 mb-4">
+          {isOwnReport ? '동료와 대화할 때 서로 배려하면 좋은 점들이에요.' : `${report.user_name}님과 협업할 때 참고하세요.`}
+        </p>
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="rounded-xl bg-white border border-slate-100 p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                <UserPlus className="w-4 h-4 text-emerald-600" />
+              </div>
+              <h3 className="font-semibold text-slate-900 text-sm">
+                {isOwnReport ? '동료가 나와 일할 때' : '이렇게 다가가면 좋아요'}
+              </h3>
+            </div>
+            <p className="text-sm text-slate-600 leading-relaxed">{narrative.work_with_me}</p>
+          </div>
+          <div className="rounded-xl bg-white border border-slate-100 p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                <Users2 className="w-4 h-4 text-blue-600" />
+              </div>
+              <h3 className="font-semibold text-slate-900 text-sm">
+                {isOwnReport ? '내가 동료를 대할 때 의식할 점' : `${report.user_name}님이 신경 쓰는 점`}
+              </h3>
+            </div>
+            <p className="text-sm text-slate-600 leading-relaxed">{narrative.i_adapt}</p>
+          </div>
+        </div>
+      </motion.div>
+
       {/* Grid + Components */}
       <div className="grid lg:grid-cols-2 gap-6">
         <motion.div
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
           className="card"
         >
-          <h2 className="section-title mb-1">라이프스타일 그리드</h2>
-          <p className="text-sm text-slate-500 mb-8">평소 행동과 내면의 욕구 위치를 나타냅니다</p>
+          <h2 className="section-title mb-1">협업 스타일 맵</h2>
+          <p className="text-sm text-slate-500 mb-8">드러나는 스타일과 편한 조건의 위치를 나타냅니다</p>
           <div className="px-6 pb-2">
             <LifestyleGrid
               usualX={data.life_style_x}
@@ -169,8 +207,8 @@ export default function ReportPage() {
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
           className="card"
         >
-          <h2 className="section-title mb-1">성격 컴포넌트</h2>
-          <p className="text-sm text-slate-500 mb-2">평소 행동과 내면의 욕구를 비교합니다</p>
+          <h2 className="section-title mb-1">스타일 요소</h2>
+          <p className="text-sm text-slate-500 mb-2">드러나는 스타일과 편한 조건을 비교합니다</p>
           <ComponentChart components={data.components} componentNames={data.component_names} />
         </motion.div>
       </div>
@@ -221,10 +259,10 @@ export default function ReportPage() {
         ))}
       </div>
 
-      {/* 모델 고지 */}
-      <p className="text-xs text-slate-400 text-center pt-2 leading-relaxed">
-        이 리포트는 워크숍·자기이해를 돕기 위한 <b>자체 성향 모델</b>로 산출되었습니다.
-        공식 Birkman Method®의 진단 결과와는 다를 수 있으며, 평가나 선발의 근거가 아닙니다.
+      {/* 면책 고지 */}
+      <p className="text-xs text-slate-400 text-center pt-2 leading-relaxed max-w-2xl mx-auto">
+        본 워크샵은 특정 상용 진단도구의 공식 프로그램이 아니며, 팀 내 협업 방식과 업무 선호를
+        탐색하기 위한 자체 활동입니다. 개인 평가나 인사 판단에 사용하지 않습니다.
       </p>
     </div>
   )

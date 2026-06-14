@@ -41,7 +41,7 @@ export default function DashboardPage() {
         <div className="relative z-10 flex items-center justify-between flex-wrap gap-4">
           <div>
             <div className="flex items-center gap-2 text-brand-100 text-sm font-medium mb-2">
-              <Sparkles className="w-4 h-4" /> Birkman Workshop
+              <Sparkles className="w-4 h-4" /> 협업 스타일 워크샵
             </div>
             {isCompleted ? (
               <>
@@ -57,7 +57,7 @@ export default function DashboardPage() {
               </>
             ) : (
               <>
-                <h2 className="text-xl font-bold mb-1">버크만 진단을 시작해보세요</h2>
+                <h2 className="text-xl font-bold mb-1">협업 스타일 진단을 시작해보세요</h2>
                 <p className="text-brand-100 text-sm">약 10분 소요 · {totalQ}개 문항</p>
               </>
             )}

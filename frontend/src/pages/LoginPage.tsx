@@ -109,7 +109,7 @@ export default function LoginPage() {
             <div className="space-y-2.5 max-w-md">
               <div className="flex items-center gap-3 text-sm">
                 <span className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center text-xs font-bold">BW</span>
-                <span className="text-brand-50"><b className="font-semibold">Birkman Workshop</b> · 성향·강점 진단과 리포트</span>
+                <span className="text-brand-50"><b className="font-semibold">협업 스타일 워크샵</b> · 함께 일하는 방식과 강점 탐색</span>
               </div>
               <div className="flex items-center gap-3 text-sm opacity-75">
                 <span className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-xs font-bold">WS</span>

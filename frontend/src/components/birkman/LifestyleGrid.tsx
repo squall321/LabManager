@@ -105,10 +105,10 @@ export function LifestyleGrid({ usualX, usualY, needX, needY, primaryColor }: Pr
       {/* Legend */}
       <div className="flex items-center justify-center gap-5 mt-4 text-xs text-slate-500">
         <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: primaryHex }} /> 평소 행동
+          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: primaryHex }} /> 드러나는 스타일
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full border-[2px] bg-white" style={{ borderColor: primaryHex }} /> 내면의 욕구
+          <span className="w-3 h-3 rounded-full border-[2px] bg-white" style={{ borderColor: primaryHex }} /> 편한 조건
         </span>
       </div>
     </div>

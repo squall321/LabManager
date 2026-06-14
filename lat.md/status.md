@@ -1,4 +1,4 @@
-# 개발 현황 (2026-06-11)
+# 개발 현황 (2026-06-12)
 
 → 상위: [[overview#개발 현황]]  
 → 개선 계획 원문: `docs/IMPROVEMENT_PLAN.md`  
@@ -9,13 +9,14 @@
 ## 전체 요약
 
 | 구분 | 완료 | 전체 | 상태 |
-|---|---|---|---|
+|---|---|---|
 | P0 보안·데이터 안전 | 4 | 4 | ✅ 전부 완료 |
 | P1 사용 경험 | 5 | 5 | ✅ 전부 완료 |
 | P2 완성도·확장 | 6 | 9 | ⚠️ 3건 의도적 보류 |
 | WorkCraft Phase 1 | — | — | ✅ 완료 |
 | WorkCraft Phase 2 | — | — | ✅ 완료 |
 | WorkCraft Phase 3 | 0 | 2 | ⬜ 미착수 |
+| **Assessments** | — | — | ✅ 완료 (psych_safety · SDT) |
 
 ---
 
@@ -28,7 +29,7 @@
 | P0-1 | DB 마이그레이션 (Alembic) | ✅ | Alembic 도입, SQLite batch 모드, 전체 10테이블 초기 마이그레이션 생성·검증. 운영은 `alembic upgrade head`. |
 | P0-2 | 첫 로그인 인증 강화 | ✅ | `SIGNUP_CODE` 도입. 등록 이메일+가입 코드 두 조건 충족해야 계정 활성화. `check-email`이 `signup_required` 반환. → [[security#SIGNUP_CODE]] |
 | P0-3 | SECRET_KEY 안전화 | ✅ | 커밋된 기본키 제거. env 우선 + 미설정 시 `data/.secret_key`에 배포별 무작위 키 자동 생성(gitignore). `.env.example` 추가. → [[security#SECRET_KEY 관리]] |
-| P0-4 | 테스트·CI | ✅ | pytest 12케이스 + GitHub Actions(백엔드 pytest + 프론트 빌드). → [[tests#테스트 커버리지]] |
+| P0-4 | 테스트·CI | ✅ | pytest **15케이스** + GitHub Actions(백엔드 pytest + 프론트 빌드). → [[tests#테스트 커버리지]] |
 
 ---
 
@@ -119,6 +120,30 @@
 | P2-12 캘린더 미지정 | ✅ | 미지정 미션 목록 |
 | P2-13 접근성(1차) | ✅ | 토스트/모달/aria 라벨 |
 | P1-6 터치 DnD | ✅ | @dnd-kit 핸들 드래그 |
+| Assessments 백엔드 | ✅ | assessment_data·engine + API + 마이그레이션 + pytest 3케이스 |
+| Assessments 프론트 | ✅ | Hub·Take·Result·Team 4페이지 + 사이드바 "진단" 항목 |
+
+---
+
+## Assessments 프레임워크 ✅ 완료
+
+→ 상세: [[assessments#Assessment 프레임워크]]
+
+### 백엔드 (커밋 e0506ee)
+- [x] `assessment_data.py` — instrument 레지스트리 (psych_safety 7문항·팀, sdt 9문항·개인)
+- [x] `assessment_engine.py` — 하위척도별 0–100 채점 + 역채점 + 밴드 해석 + 팀 익명 집계(N≥5)
+- [x] `Assessment` 모델 (user+instrument 당 1건, upsert) + Alembic 마이그레이션
+- [x] `api/assessments.py` — list / questions / submit / result / team(파트장 전용)
+- [x] `conftest.py` 개선 — 테스트당 DB 리셋 + 재시드 (순서 독립성 보장)
+- [x] pytest 3케이스 추가 → 총 **15케이스** 통과
+
+### 프론트엔드 (커밋 215afd6)
+- [x] `AssessmentsHubPage` — scope 배지, 완료 상태, 파트장 "팀 결과" 버튼
+- [x] `AssessmentTakePage` — 5점 리커트, 남은 문항 안내, 첫 미답변 자동 스크롤
+- [x] `AssessmentResultPage` — overall + 하위척도별 점수 바·밴드
+- [x] `AssessmentTeamPage` — N/5 "모이는 중" 게이트, 문항별 팀 평균, 개인 데이터 없음
+- [x] 사이드바 "진단" 항목 → Birkman 그룹 추가
+- [x] 라우트 4개 lazy() 등록
 
 ---
 
@@ -127,6 +152,7 @@
 우선순위순:
 
 1. **WorkCraft Phase 3**: MissionReview CRUD + ReviewPage 구현 (Birkman 관심영역 연계)
-2. **P2-15 페이지네이션**: 데이터 증가 확인 후 `limit/offset` 도입
-3. **파일럿 운영 착수**: 4주 계획 → [[workcraft#파일럿 운영 계획]]
-4. **P2-16/17**: 외부 노출 시점에 토큰 강화 + Docker 배포
+2. **Assessments 진단 도구 추가**: `assessment_data.py`에 새 instrument 정의만으로 확장 가능 → [[assessments#새 진단 추가 방법]]
+3. **P2-15 페이지네이션**: 데이터 증가 확인 후 `limit/offset` 도입
+4. **파일럿 운영 착수**: 4주 계획 → [[workcraft#파일럿 운영 계획]]
+5. **P2-16/17**: 외부 노출 시점에 토큰 강화 + Docker 배포

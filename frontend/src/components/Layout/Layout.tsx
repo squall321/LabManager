@@ -10,11 +10,11 @@ import {
 import { cn } from '../../lib/utils'
 
 const birkmanNav = [
-  { to: '/',            label: '대시보드',   icon: LayoutDashboard },
-  { to: '/survey',      label: '버크만 설문', icon: ClipboardList },
-  { to: '/report',      label: '내 리포트',   icon: FileBarChart },
-  { to: '/team',        label: '팀 리포트',   icon: Users },
-  { to: '/assessments', label: '진단',        icon: ClipboardCheck },
+  { to: '/',            label: '대시보드',     icon: LayoutDashboard },
+  { to: '/survey',      label: '협업 스타일 진단', icon: ClipboardList },
+  { to: '/report',      label: '내 리포트',     icon: FileBarChart },
+  { to: '/team',        label: '팀 리포트',     icon: Users },
+  { to: '/assessments', label: '진단',          icon: ClipboardCheck },
 ]
 
 const workcraftNav = [
@@ -29,7 +29,7 @@ const workcraftNav = [
 ]
 
 const modules = [
-  { key: 'birkman',   home: '/',                    short: 'BW' },
+  { key: 'birkman',   home: '/',                    short: 'CS' },
   { key: 'workcraft', home: '/workcraft/frictions', short: 'WS' },
 ]
 
@@ -112,7 +112,7 @@ export function Layout() {
                   'w-4 h-4 rounded flex items-center justify-center text-[8px] font-bold',
                   activeModule === m.key ? 'bg-brand-100 text-brand-700' : 'bg-slate-200 text-slate-500'
                 )}>{m.short}</span>
-                {m.key === 'birkman' ? 'Birkman' : 'WorkCraft'}
+                {m.key === 'birkman' ? '협업 스타일' : 'WorkCraft'}
               </button>
             ))}
           </div>
@@ -121,7 +121,7 @@ export function Layout() {
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           <div className="pb-1 px-3">
             <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-              {activeModule === 'workcraft' ? 'WorkCraft Studio' : 'Birkman Workshop'}
+              {activeModule === 'workcraft' ? 'WorkCraft Studio' : '협업 스타일 워크샵'}
             </div>
           </div>
           {nav.map((item) => (

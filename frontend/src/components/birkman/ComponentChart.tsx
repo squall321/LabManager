@@ -12,8 +12,8 @@ interface Props {
 export function ComponentChart({ components, componentNames }: Props) {
   const data = Object.entries(components).map(([key, score]) => ({
     component: componentNames[key] || key,
-    '평소 행동': Math.round(score.usual),
-    '내면의 욕구': Math.round(score.need),
+    '드러나는 스타일': Math.round(score.usual),
+    '편한 조건': Math.round(score.need),
   }))
 
   return (
@@ -25,16 +25,16 @@ export function ComponentChart({ components, componentNames }: Props) {
           tick={{ fill: '#475569', fontSize: 12, fontWeight: 500 }}
         />
         <Radar
-          name="평소 행동"
-          dataKey="평소 행동"
+          name="드러나는 스타일"
+          dataKey="드러나는 스타일"
           stroke="#6366f1"
           fill="#6366f1"
           fillOpacity={0.25}
           strokeWidth={2}
         />
         <Radar
-          name="내면의 욕구"
-          dataKey="내면의 욕구"
+          name="편한 조건"
+          dataKey="편한 조건"
           stroke="#ec4899"
           fill="#ec4899"
           fillOpacity={0.15}

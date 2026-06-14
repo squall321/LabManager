@@ -72,12 +72,12 @@ LabManager/
 │   │       ├── admin.py         # /api/admin/* (is_admin 전용)
 │   │       ├── workcraft.py     # /api/workcraft/* (개인 CRUD)
 │   │       ├── templates.py     # /api/templates/* (공유 라이브러리)
-│   │       ├── leader.py        # /api/leader/* (is_part_leader, 익명 집계 전용)
-│   │       └── deps.py          # get_current_user, get_current_admin,
+│   │       ├── leader.py        # /api/leader/* (is_part_leader, 익명 집계 전용)│   │       ├── assessments.py   # /api/assessments/* (진단 목록·응답·결과·팀 집계)│   │       └── deps.py          # get_current_user, get_current_admin,
 │   │                            #   get_current_part_leader
 │   ├── alembic/
 │   │   └── versions/
-│   │       └── 17442b2eb4c7_initial_schema.py  # 10개 테이블 초기 마이그레이션
+│   │       ├── 17442b2eb4c7_initial_schema.py      # 10개 테이블 초기 마이그레이션
+│   │       └── 64e0e90650ca_add_assessments_table.py # assessments 테이블 추가
 │   ├── cpp/
 │   │   └── birkman_calc/
 │   │       ├── calculator.cpp/.h   # 점수 계산 엔진 (Python과 동일 가중치)
@@ -104,7 +104,10 @@ LabManager/
         │   ├── ReportPage.tsx
         │   ├── TeamPage.tsx
         │   ├── AdminPage.tsx
-        │   └── workcraft/        # 11개 WorkCraft 페이지
+        │   ├── workcraft/        # 11개 WorkCraft 페이지
+        │   └── assessments/      # 4개 Assessment 페이지
+        │       # AssessmentsHubPage, AssessmentTakePage,
+        │       # AssessmentResultPage, AssessmentTeamPage
         ├── services/api.ts       # API 클라이언트 (Birkman + WorkCraft)
         ├── store/
         │   ├── authStore.ts      # JWT 토큰 보관 (localStorage)

@@ -16,6 +16,7 @@ require-code-mention: true
 - **환경변수**: `DATABASE_URL` + `SECRET_KEY=test-secret-key-for-ci` + `SIGNUP_CODE=""` (기본 비활성)
 - **TestClient**: FastAPI lifespan 실행 포함 (YAML 사용자 자동 로딩)
 - **`login` 픽스처**: 이메일로 계정 활성화(set-password) 또는 재로그인 후 `Authorization` 헤더 반환
+- **테스트 격리 개선** (커밋 e0506ee): 테스트당 DB 리셋 + 재시드 → 순서 독립성 보장
 
 ---
 
@@ -115,9 +116,33 @@ jobs:
     - npm run build
 ```
 
-- **백엔드**: pytest 12케이스 전체 실행
+- **백엔드**: pytest **15케이스** 전체 실행
 - **프론트엔드**: Vite 프로덕션 빌드 (타입 에러·번들 오류 감지)
 - PR/push 시 자동 실행
+
+---
+
+## Assessment 테스트 (`test_assessments.py`)
+
+### TC-AS-1: 목록 조회 + SDT 제출·채점
+- `/assessments` 목록에 `psych_safety`, `sdt` 두 키 포함 확인
+- SDT 전체 5점 응답 제출 → `scope == "individual"`, 3개 하위척도 키 존재, `autonomy.score == 100.0`, `overall == 100.0`
+- 결과 재조회 200, 목록에 `completed == True` 반영
+- 검증: 채점 공식 정확성 + upsert 동작
+
+### TC-AS-2: 심리적 안전감 역채점 정확성
+- 정방향 문항: 응답 5, 역채점 문항: 응답 1 → 역채점 후 모두 유효값 5
+- 최종 `overall == 100.0`
+- 검증: `_effective(item, raw) = 6 - raw` (reverse=True) 정확성
+
+### TC-AS-3: 팀 집계 임계값 + 접근 제어
+- 5명이 psych_safety 응답 제출
+- 일반 구성원이 `/team` 접근 → 403
+- 파트장이 `/team` 접근 → `visible == True`, `n >= 5`, `overall` + `item_means` 포함, `"user_id"` 미포함
+- 파트장이 SDT (개인 진단)의 `/team` 접근 → 400
+- 검증: `get_current_part_leader` 강제 + scope 검증 + 개인 정보 미노출
+
+**총 테스트 케이스: 15개** (인증 4 + WorkCraft 4 + 파트장·성장 4 + Assessment 3)
 
 ---
 
