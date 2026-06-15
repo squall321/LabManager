@@ -107,6 +107,12 @@ export const getAssessmentResult = (key: string) =>
 export const getAssessmentTeam = (key: string) =>
   api.get(`/assessments/${key}/team`).then((r) => r.data)
 
+// Weekly Pulse
+export const getPulseCurrent = () => api.get('/pulse/current').then((r) => r.data)
+export const submitPulse = (responses: Record<string, number>) =>
+  api.post('/pulse/submit', { responses }).then((r) => r.data)
+export const getPulseTrends = () => api.get('/pulse/trends').then((r) => r.data)
+
 // Admin
 export const getAdminStats = () => api.get('/admin/stats').then((r) => r.data)
 export const getAdminUsers = () => api.get('/admin/users').then((r) => r.data)

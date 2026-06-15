@@ -135,6 +135,27 @@ export interface TeamAggregate {
   item_means?: { id: number; text: string; mean: number }[]
 }
 
+// ── Weekly Pulse ──
+export interface PulseQuestion { key: string; short: string; text: string }
+export interface PulseCurrent {
+  week: string
+  scale_labels: string[]
+  questions: PulseQuestion[]
+  answered: boolean
+  my_responses: Record<string, number>
+}
+export interface PulseTrendPoint {
+  week: string
+  n: number
+  visible: boolean
+  [questionKey: string]: number | string | boolean | null
+}
+export interface PulseTrends {
+  min_n: number
+  questions: PulseQuestion[]
+  series: PulseTrendPoint[]
+}
+
 export interface SurveyStatus {
   has_survey: boolean
   id?: number
