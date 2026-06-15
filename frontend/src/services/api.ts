@@ -107,6 +107,13 @@ export const getAssessmentResult = (key: string) =>
 export const getAssessmentTeam = (key: string) =>
   api.get(`/assessments/${key}/team`).then((r) => r.data)
 
+// Team Agreements
+export const getAgreementMeta = () => api.get('/agreements/meta').then((r) => r.data)
+export const listAgreements = () => api.get('/agreements').then((r) => r.data)
+export const createAgreement = (data: any) => api.post('/agreements', data).then((r) => r.data)
+export const deleteAgreement = (id: number) => api.delete(`/agreements/${id}`).then((r) => r.data)
+export const toggleAgreementAgree = (id: number) => api.post(`/agreements/${id}/agree`).then((r) => r.data)
+
 // Weekly Pulse
 export const getPulseCurrent = () => api.get('/pulse/current').then((r) => r.data)
 export const submitPulse = (responses: Record<string, number>) =>
