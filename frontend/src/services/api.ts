@@ -107,6 +107,13 @@ export const getAssessmentResult = (key: string) =>
 export const getAssessmentTeam = (key: string) =>
   api.get(`/assessments/${key}/team`).then((r) => r.data)
 
+// Collaboration Reflections
+export const getReflectionMeta = () => api.get('/reflections/meta').then((r) => r.data)
+export const getReflectionCurrent = () => api.get('/reflections/current').then((r) => r.data)
+export const submitReflection = (data: any) => api.post('/reflections/submit', data).then((r) => r.data)
+export const getMyReflections = () => api.get('/reflections/mine').then((r) => r.data)
+export const getReflectionTrends = () => api.get('/reflections/trends').then((r) => r.data)
+
 // Team Agreements
 export const getAgreementMeta = () => api.get('/agreements/meta').then((r) => r.data)
 export const listAgreements = () => api.get('/agreements').then((r) => r.data)
