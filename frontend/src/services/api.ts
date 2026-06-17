@@ -107,6 +107,13 @@ export const getAssessmentResult = (key: string) =>
 export const getAssessmentTeam = (key: string) =>
   api.get(`/assessments/${key}/team`).then((r) => r.data)
 
+// Kudos
+export const getKudosMeta = () => api.get('/kudos/meta').then((r) => r.data)
+export const giveKudos = (data: any) => api.post('/kudos', data).then((r) => r.data)
+export const getKudosFeed = () => api.get('/kudos/feed').then((r) => r.data)
+export const getKudosReceived = () => api.get('/kudos/received').then((r) => r.data)
+export const getRecentRecognized = () => api.get('/kudos/recent-recognized').then((r) => r.data)
+
 // Collaboration Reflections
 export const getReflectionMeta = () => api.get('/reflections/meta').then((r) => r.data)
 export const getReflectionCurrent = () => api.get('/reflections/current').then((r) => r.data)

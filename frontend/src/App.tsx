@@ -15,6 +15,7 @@ const TeamCollabMapPage = lazy(() => import('./pages/TeamCollabMapPage'))
 const PulsePage = lazy(() => import('./pages/PulsePage'))
 const AgreementsPage = lazy(() => import('./pages/AgreementsPage'))
 const ReflectionPage = lazy(() => import('./pages/ReflectionPage'))
+const KudosPage = lazy(() => import('./pages/KudosPage'))
 const AdminPage = lazy(() => import('./pages/AdminPage'))
 const FrictionsPage = lazy(() => import('./pages/workcraft/FrictionsPage'))
 const TeamFrictionsPage = lazy(() => import('./pages/workcraft/TeamFrictionsPage'))
@@ -73,6 +74,7 @@ export default function App() {
             <Route path="/pulse" element={<PulsePage />} />
             <Route path="/agreements" element={<AgreementsPage />} />
             <Route path="/reflections" element={<ReflectionPage />} />
+            <Route path="/kudos" element={<KudosPage />} />
 
             {/* Assessments */}
             <Route path="/assessments" element={<AssessmentsHubPage />} />
