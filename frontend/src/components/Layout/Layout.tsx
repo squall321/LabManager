@@ -5,7 +5,7 @@ import {
   LayoutDashboard, ClipboardList, FileBarChart, Users,
   Settings, LogOut, FlaskConical, Lightbulb, Target,
   KanbanSquare, Share2, CalendarDays, Library, LifeBuoy, BarChart3, Sprout,
-  Menu, X, ClipboardCheck, Network, Activity, ScrollText, MessagesSquare, Award,
+  Menu, X, ClipboardCheck, Network, Activity, ScrollText, MessagesSquare, Award, GitBranch,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
@@ -19,6 +19,7 @@ const birkmanNav = [
   { to: '/reflections', label: '협업 회고',     icon: MessagesSquare },
   { to: '/kudos',       label: '고마워요',      icon: Award },
   { to: '/agreements',  label: '협업 합의서',   icon: ScrollText },
+  { to: '/decisions',   label: '결정 기록',     icon: GitBranch },
   { to: '/assessments', label: '진단',          icon: ClipboardCheck },
 ]
 

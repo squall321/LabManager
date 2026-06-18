@@ -16,6 +16,7 @@ const PulsePage = lazy(() => import('./pages/PulsePage'))
 const AgreementsPage = lazy(() => import('./pages/AgreementsPage'))
 const ReflectionPage = lazy(() => import('./pages/ReflectionPage'))
 const KudosPage = lazy(() => import('./pages/KudosPage'))
+const DecisionsPage = lazy(() => import('./pages/DecisionsPage'))
 const AdminPage = lazy(() => import('./pages/AdminPage'))
 const FrictionsPage = lazy(() => import('./pages/workcraft/FrictionsPage'))
 const TeamFrictionsPage = lazy(() => import('./pages/workcraft/TeamFrictionsPage'))
@@ -75,6 +76,7 @@ export default function App() {
             <Route path="/agreements" element={<AgreementsPage />} />
             <Route path="/reflections" element={<ReflectionPage />} />
             <Route path="/kudos" element={<KudosPage />} />
+            <Route path="/decisions" element={<DecisionsPage />} />
 
             {/* Assessments */}
             <Route path="/assessments" element={<AssessmentsHubPage />} />

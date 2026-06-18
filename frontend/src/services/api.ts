@@ -107,6 +107,12 @@ export const getAssessmentResult = (key: string) =>
 export const getAssessmentTeam = (key: string) =>
   api.get(`/assessments/${key}/team`).then((r) => r.data)
 
+// Decision Log
+export const listDecisions = () => api.get('/decisions').then((r) => r.data)
+export const createDecision = (data: any) => api.post('/decisions', data).then((r) => r.data)
+export const updateDecision = (id: number, data: any) => api.put(`/decisions/${id}`, data).then((r) => r.data)
+export const deleteDecision = (id: number) => api.delete(`/decisions/${id}`).then((r) => r.data)
+
 // Kudos
 export const getKudosMeta = () => api.get('/kudos/meta').then((r) => r.data)
 export const giveKudos = (data: any) => api.post('/kudos', data).then((r) => r.data)
