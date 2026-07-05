@@ -74,7 +74,7 @@ export function Layout() {
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
             <FlaskConical className="w-4 h-4 text-white" />
           </div>
-          <span className="font-bold text-slate-900">LabManager</span>
+          <span className="font-bold text-slate-900">디지털트윈AX랩</span>
         </div>
       </div>
 
@@ -93,8 +93,8 @@ export function Layout() {
               <FlaskConical className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className="font-bold text-slate-900 leading-tight">LabManager</div>
-              <div className="text-[11px] text-slate-400 font-medium">People &amp; Growth</div>
+              <div className="font-bold text-slate-900 leading-tight">디지털트윈AX랩</div>
+              <div className="text-[11px] text-slate-400 font-medium">Digital Twin AX Lab</div>
             </div>
           </div>
           <button onClick={close} className="lg:hidden p-1 text-slate-400 hover:text-slate-600" aria-label="메뉴 닫기">

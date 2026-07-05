@@ -93,8 +93,8 @@ export default function LoginPage() {
               <FlaskConical className="w-6 h-6" />
             </div>
             <div>
-              <span className="text-xl font-bold block leading-tight">LabManager</span>
-              <span className="text-brand-200 text-xs font-medium">People &amp; Growth Platform</span>
+              <span className="text-xl font-bold block leading-tight">디지털트윈AX랩</span>
+              <span className="text-brand-200 text-xs font-medium">Digital Twin AX Lab</span>
             </div>
           </div>
           <div>
@@ -102,7 +102,7 @@ export default function LoginPage() {
               나를 이해하고<br />성장을 설계하는 공간
             </h1>
             <p className="text-brand-100 text-base leading-relaxed max-w-md mb-7">
-              LabManager는 구성원 한 사람 한 사람이 자신의 강점을 발견하고,
+              디지털트윈AX랩은 구성원 한 사람 한 사람이 자신의 강점을 발견하고,
               스스로 성장의 방향을 그려가도록 돕는 모듈형 워크스페이스입니다.
               기록과 리포트는 온전히 당신의 것입니다.
             </p>
@@ -131,7 +131,7 @@ export default function LoginPage() {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
               <FlaskConical className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-slate-900">LabManager</span>
+            <span className="text-xl font-bold text-slate-900">디지털트윈AX랩</span>
           </div>
 
           <AnimatePresence mode="wait">

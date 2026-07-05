@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     # Alembic 마이그레이션(alembic upgrade head)으로 스키마를 관리한다.
     AUTO_CREATE_ALL: bool = True
 
-    APP_NAME: str = "LabManager HR System"
+    APP_NAME: str = "디지털트윈AX랩"
     APP_VERSION: str = "1.0.0"
 
     class Config:
