@@ -108,12 +108,16 @@ export default function LoginPage() {
             </p>
             <div className="space-y-2.5 max-w-md">
               <div className="flex items-center gap-3 text-sm">
-                <span className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center text-xs font-bold">BW</span>
-                <span className="text-brand-50"><b className="font-semibold">협업 스타일 워크샵</b> · 함께 일하는 방식과 강점 탐색</span>
+                <span className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center text-xs font-bold">CS</span>
+                <span className="text-brand-50"><b className="font-semibold">협업 스타일 워크샵</b> · 진단 리포트와 팀 협업 맵</span>
               </div>
-              <div className="flex items-center gap-3 text-sm opacity-75">
-                <span className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-xs font-bold">WS</span>
-                <span className="text-brand-100"><b className="font-semibold">WorkCraft Studio</b> · 업무 개선 미션 <span className="text-[11px] bg-white/15 px-1.5 py-0.5 rounded">준비 중</span></span>
+              <div className="flex items-center gap-3 text-sm">
+                <span className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center text-xs font-bold">WS</span>
+                <span className="text-brand-50"><b className="font-semibold">WorkCraft Studio</b> · 업무 개선 미션과 성장 여정</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm">
+                <span className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center text-xs font-bold">TL</span>
+                <span className="text-brand-50"><b className="font-semibold">팀 협업 도구</b> · 펄스·회고·합의서·고마워요·결정 기록</span>
               </div>
             </div>
           </div>
