@@ -4,8 +4,8 @@ import { cn } from '../../lib/utils'
 
 const OPTIONS: { value: Visibility; label: string; desc: string; icon: typeof Lock }[] = [
   { value: 'private',            label: '나만 보기',        desc: '기본값 · 본인만 열람',          icon: Lock },
-  { value: 'leader_only',        label: '파트장에게 공유',  desc: '파트장만 추가로 열람',          icon: UserCog },
-  { value: 'team_public',        label: '파트 전체에 공유', desc: '모든 구성원이 열람',            icon: Users2 },
+  { value: 'leader_only',        label: '랩장에게 공유',    desc: '랩장만 추가로 열람',            icon: UserCog },
+  { value: 'team_public',        label: '랩 전체에 공유',   desc: '모든 구성원이 열람',            icon: Users2 },
   { value: 'anonymous_template', label: '익명 템플릿',      desc: '이름 없이 템플릿으로 공유',      icon: FileText },
 ]
 

@@ -23,7 +23,7 @@ export default function SupportRequestPage() {
     mutationFn: () => createSupportRequest(form),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-support'] })
-      toast.success('요청을 보냈어요. 파트장이 익명 집계로 확인해요')
+      toast.success('요청을 보냈어요. 랩장이 익명 집계로 확인해요')
       setForm({ request_type: '샘플 코드', description: '', anonymous: true })
     },
     onError: () => toast.error('요청 전송에 실패했어요'),
@@ -41,7 +41,7 @@ export default function SupportRequestPage() {
           <LifeBuoy className="w-6 h-6 text-brand-500" /> 지원 요청
         </h1>
         <p className="text-slate-500 mt-1 max-w-2xl">
-          업무 개선에 필요한 교육·환경·도구를 요청하세요. 파트장은 요청을 <b>익명 집계</b>로 확인하고
+          업무 개선에 필요한 교육·환경·도구를 요청하세요. 랩장은 요청을 <b>익명 집계</b>로 확인하고
           공통적으로 필요한 지원을 제공합니다. 익명으로 보내면 이름이 표시되지 않습니다.
         </p>
       </motion.div>

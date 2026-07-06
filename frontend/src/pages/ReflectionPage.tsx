@@ -54,7 +54,7 @@ export default function ReflectionPage() {
           <MessagesSquare className="w-6 h-6 text-brand-500" /> 협업 회고
         </h1>
         <p className="text-slate-500 mt-1 max-w-2xl">
-          이번 주 협업은 어땠나요? <b>메모는 나만 보고</b>, 파트장은 개인 내용 대신
+          이번 주 협업은 어땠나요? <b>메모는 나만 보고</b>, 랩장은 개인 내용 대신
           <b> 어떤 마찰이 반복되는지</b>만 익명으로 봅니다.
         </p>
       </motion.div>
@@ -82,7 +82,7 @@ export default function ReflectionPage() {
         <textarea className="input-field mt-1.5 min-h-[72px]" value={note} onChange={(e) => setNote(e.target.value)}
           placeholder="무엇 때문에 그랬는지 짧게 적어두면, 나중에 패턴이 보여요" />
         <div className="flex items-center justify-between mt-4">
-          <span className="text-xs text-slate-400 flex items-center gap-1.5"><Lock className="w-3 h-3" /> 메모는 파트장에게 전달되지 않아요</span>
+          <span className="text-xs text-slate-400 flex items-center gap-1.5"><Lock className="w-3 h-3" /> 메모는 랩장에게 전달되지 않아요</span>
           <button onClick={() => submitMut.mutate()} disabled={!type || submitMut.isPending} className="btn-primary">
             {submitMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : data.answered ? '수정 저장' : '회고 남기기'}
           </button>
@@ -109,7 +109,7 @@ export default function ReflectionPage() {
       {user?.is_part_leader && trends && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="card">
           <h2 className="section-title mb-1 flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-brand-500" /> 반복되는 협업 마찰 <span className="text-xs font-normal text-slate-400">· 파트장 전용 · 익명 · 최근 {trends.weeks}주</span>
+            <ShieldCheck className="w-4 h-4 text-brand-500" /> 반복되는 협업 마찰 <span className="text-xs font-normal text-slate-400">· 랩장 전용 · 익명 · 최근 {trends.weeks}주</span>
           </h2>
           <p className="text-sm text-slate-400 mb-4 flex items-center gap-1.5">
             <Lock className="w-3.5 h-3.5" /> 메모는 보이지 않으며, 서로 다른 기여자 {trends.min_n}명 이상인 유형만 공개됩니다.

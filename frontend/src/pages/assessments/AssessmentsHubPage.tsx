@@ -24,7 +24,7 @@ export default function AssessmentsHubPage() {
         </h1>
         <p className="text-slate-500 mt-1 max-w-2xl">
           검증된 방법론으로 나와 팀을 더 잘 이해해보세요. 개인 진단 결과는 <b>본인만</b> 보고,
-          팀 진단은 개인 응답 대신 <b>익명 집계</b>만 파트장에게 전달됩니다.
+          팀 진단은 개인 응답 대신 <b>익명 집계</b>만 랩장에게 전달됩니다.
         </p>
       </motion.div>
 
@@ -59,7 +59,7 @@ export default function AssessmentsHubPage() {
                   <button onClick={() => navigate(`/assessments/${a.key}/result`)} className="btn-secondary text-sm">결과</button>
                 )}
                 {a.scope === 'team' && user?.is_part_leader && (
-                  <button onClick={() => navigate(`/assessments/${a.key}/team`)} className="btn-secondary text-sm" title="파트장 전용 익명 집계">
+                  <button onClick={() => navigate(`/assessments/${a.key}/team`)} className="btn-secondary text-sm" title="랩장 전용 익명 집계">
                     <BarChart3 className="w-4 h-4" /> 팀 결과
                   </button>
                 )}

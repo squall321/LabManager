@@ -42,6 +42,6 @@ def get_current_part_leader(current_user: User = Depends(get_current_user)) -> U
     if not current_user.is_part_leader:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="파트장 권한이 필요합니다",
+            detail="랩장 권한이 필요합니다",
         )
     return current_user

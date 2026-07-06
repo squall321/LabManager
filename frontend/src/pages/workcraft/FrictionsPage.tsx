@@ -83,7 +83,7 @@ export default function FrictionsPage() {
         </p>
         <p className="text-xs text-slate-400 mt-2 max-w-2xl leading-relaxed">
           ℹ️ 내용과 이름은 누구에게도 공개되지 않습니다. 다만 어떤 <b>유형</b>의 불편함이 많은지에 대한
-          익명 집계는(같은 유형을 <b>5명 이상</b>이 적었을 때만, 내용·이름 제외) 파트장이 공통 지원을 마련하는 데 쓰일 수 있어요.
+          익명 집계는(같은 유형을 <b>5명 이상</b>이 적었을 때만, 내용·이름 제외) 랩장이 공통 지원을 마련하는 데 쓰일 수 있어요.
         </p>
       </motion.div>
 

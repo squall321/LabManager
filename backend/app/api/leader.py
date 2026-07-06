@@ -9,7 +9,7 @@ from ..models.user import User
 from ..services import trends_service
 from .deps import get_current_part_leader
 
-router = APIRouter(prefix="/leader", tags=["파트장"])
+router = APIRouter(prefix="/leader", tags=["랩장"])
 
 
 @router.get("/anonymous-trends")

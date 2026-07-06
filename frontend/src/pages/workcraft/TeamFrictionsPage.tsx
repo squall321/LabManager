@@ -52,7 +52,7 @@ export default function TeamFrictionsPage() {
             <Share2 className="w-8 h-8 text-slate-400" />
           </div>
           <p className="text-slate-500">아직 공유된 불편함이 없습니다.</p>
-          <p className="text-slate-400 text-sm mt-1">누군가 불편함 카드를 '파트 전체' 또는 '익명 템플릿'으로 공유하면 여기에 보입니다.</p>
+          <p className="text-slate-400 text-sm mt-1">누군가 불편함 카드를 '랩 전체' 또는 '익명 템플릿'으로 공유하면 여기에 보입니다.</p>
         </div>
       ) : (
         <div className="grid md:grid-cols-2 gap-4">

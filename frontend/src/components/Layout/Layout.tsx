@@ -140,7 +140,7 @@ export function Layout() {
           {activeModule === 'workcraft' && user?.is_part_leader && (
             <>
               <div className="pt-3 pb-1 px-3">
-                <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">파트장</div>
+                <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">랩장</div>
               </div>
               <NavLink to="/workcraft/leader" onClick={close} className={navLinkClass}>
                 <BarChart3 className="w-[18px] h-[18px]" />

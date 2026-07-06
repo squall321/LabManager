@@ -49,7 +49,7 @@ export default function PulsePage() {
           <Activity className="w-6 h-6 text-brand-500" /> 주간 펄스
         </h1>
         <p className="text-slate-500 mt-1 max-w-2xl">
-          매주 30초, 가볍게 팀 분위기를 체크해요. 답변은 <b>나만 보고</b>, 파트장은 개인이 아니라
+          매주 30초, 가볍게 팀 분위기를 체크해요. 답변은 <b>나만 보고</b>, 랩장은 개인이 아니라
           <b> 주차별 익명 추세</b>만 봅니다. 꾸준함이 변화를 일찍 알아채게 해줘요.
         </p>
       </motion.div>
@@ -101,7 +101,7 @@ export default function PulsePage() {
       {user?.is_part_leader && trends && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="card">
           <h2 className="section-title mb-1 flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-brand-500" /> 주차별 추세 <span className="text-xs font-normal text-slate-400">· 파트장 전용 · 익명</span>
+            <ShieldCheck className="w-4 h-4 text-brand-500" /> 주차별 추세 <span className="text-xs font-normal text-slate-400">· 랩장 전용 · 익명</span>
           </h2>
           <p className="text-sm text-slate-400 mb-4 flex items-center gap-1.5">
             <Lock className="w-3.5 h-3.5" /> 참여 {trends.min_n}명 이상인 주차만 표시됩니다 (개인 식별 불가).

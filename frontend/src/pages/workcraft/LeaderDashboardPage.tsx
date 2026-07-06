@@ -35,7 +35,7 @@ export default function LeaderDashboardPage() {
     <div className="space-y-6">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center gap-2 text-brand-600 text-sm font-semibold mb-1">
-          <ShieldCheck className="w-4 h-4" /> 파트장 전용
+          <ShieldCheck className="w-4 h-4" /> 랩장 전용
         </div>
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
           <BarChart3 className="w-6 h-6 text-brand-500" /> 익명 대시보드
