@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit -q -m 'Plan: Working Backwards Studio \\(3rd module\\) + living-persona integration *)"
+    ]
+  }
+}
