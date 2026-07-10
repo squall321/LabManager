@@ -171,6 +171,17 @@ export const getValidation = (pid: number) => api.get(`/wb/projects/${pid}/valid
 export const saveValidation = (pid: number, data: any) => api.put(`/wb/projects/${pid}/validation`, data).then((r) => r.data)
 export const getValidationHints = (pid: number) => api.get(`/wb/projects/${pid}/validation/hints`).then((r) => r.data)
 export const exportWB = (pid: number) => api.get(`/wb/projects/${pid}/export`).then((r) => r.data)
+// Working Backwards — interview mode
+export const getInterviewPrompt = (pid: number, transcript: string) =>
+  api.post(`/wb/projects/${pid}/prompt/interview`, { transcript }).then((r) => r.data)
+export const applyWBAll = (pid: number, content: string, replace = false) =>
+  api.post(`/wb/projects/${pid}/apply-all`, { content }, { params: { replace } }).then((r) => r.data)
+
+// API tokens (for MCP / external tools)
+export const listApiTokens = () => api.get('/tokens').then((r) => r.data)
+export const createApiToken = (name: string) => api.post('/tokens', { name }).then((r) => r.data)
+export const revokeApiToken = (id: number) => api.delete(`/tokens/${id}`).then((r) => r.data)
+
 export const getWBPrompt = (pid: number, step: string, personaId?: number) =>
   api.get(`/wb/projects/${pid}/prompt/${step}`, { params: personaId ? { persona_id: personaId } : {} }).then((r) => r.data)
 export const applyWBStep = (pid: number, step: string, content: string, personaId?: number) =>

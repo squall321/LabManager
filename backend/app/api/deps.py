@@ -17,6 +17,14 @@ def get_current_user(
         detail="인증 정보가 유효하지 않습니다",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    # 개인 API 토큰(lmk_...) 우선 — MCP 등 외부 도구용
+    from ..services.token_service import TOKEN_PREFIX, resolve_token
+    if token and token.startswith(TOKEN_PREFIX):
+        user = resolve_token(db, token)
+        if user is None:
+            raise credentials_exception
+        return user
+    # 일반 JWT
     payload = decode_token(token)
     if payload is None:
         raise credentials_exception

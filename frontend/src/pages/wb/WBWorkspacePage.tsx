@@ -8,12 +8,13 @@ import { motion } from 'framer-motion'
 import {
   Compass, Loader2, ArrowLeft, ArrowRight, Lightbulb, Users2, Map, AlertTriangle,
   MessageSquare as MessageSquareQuote, ListChecks, Gauge, FileDown, Plus, Trash2, Wand2, Copy, Check,
-  Download, Sparkles, UserPlus, CheckCircle2, RotateCcw,
+  Download, Sparkles, UserPlus, CheckCircle2, RotateCcw, Mic,
 } from 'lucide-react'
 import * as api from '../../services/api'
 import { getWBMeta } from '../../services/api'
 import { toast } from '../../store/toastStore'
 import { LLMBridge } from '../../components/wb/LLMBridge'
+import { InterviewBridge } from '../../components/wb/InterviewBridge'
 import { BIRKMAN_COLORS } from '../../lib/utils'
 import type { WBProject, WBMeta, WBPersona, PersonaCandidate, WBPain, WBPRFAQ, WBFeature, WBValidation } from '../../types'
 import { cn } from '../../lib/utils'
@@ -33,7 +34,9 @@ export default function WBWorkspacePage() {
   const { pid: pidStr } = useParams()
   const pid = Number(pidStr)
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [step, setStep] = useState<string>('idea')
+  const [interview, setInterview] = useState(false)
 
   const { data: project, isLoading } = useQuery<WBProject>({ queryKey: ['wb-project', pid], queryFn: () => api.getWBProject(pid), retry: false })
   const { data: meta } = useQuery<WBMeta>({ queryKey: ['wb-meta'], queryFn: getWBMeta })
@@ -67,11 +70,21 @@ export default function WBWorkspacePage() {
   return (
     <div className="space-y-5">
       <button onClick={() => navigate('/wb')} className="btn-ghost -ml-2"><ArrowLeft className="w-4 h-4" /> 프로젝트 목록</button>
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center gap-2 text-brand-600 text-sm font-semibold mb-1"><Compass className="w-4 h-4" /> Working Backwards</div>
-        <h1 className="text-2xl font-bold text-slate-900">{project.name}</h1>
-        {project.one_liner && <p className="text-slate-500 mt-0.5">{project.one_liner}</p>}
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 text-brand-600 text-sm font-semibold mb-1"><Compass className="w-4 h-4" /> Working Backwards</div>
+          <h1 className="text-2xl font-bold text-slate-900">{project.name}</h1>
+          {project.one_liner && <p className="text-slate-500 mt-0.5">{project.one_liner}</p>}
+        </div>
+        <button onClick={() => setInterview(true)} className="btn-secondary text-sm flex-shrink-0 whitespace-nowrap">
+          <Mic className="w-4 h-4" /> 인터뷰로 채우기
+        </button>
       </motion.div>
+
+      {interview && (
+        <InterviewBridge pid={pid} onClose={() => setInterview(false)}
+          onApplied={() => queryClient.invalidateQueries()} />
+      )}
 
       <div className="grid lg:grid-cols-[200px_1fr] gap-6">
         {/* Step nav */}

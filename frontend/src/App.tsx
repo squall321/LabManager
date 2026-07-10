@@ -19,6 +19,7 @@ const KudosPage = lazy(() => import('./pages/KudosPage'))
 const DecisionsPage = lazy(() => import('./pages/DecisionsPage'))
 const WBProjectsPage = lazy(() => import('./pages/wb/WBProjectsPage'))
 const WBWorkspacePage = lazy(() => import('./pages/wb/WBWorkspacePage'))
+const ApiTokensPage = lazy(() => import('./pages/ApiTokensPage'))
 const AdminPage = lazy(() => import('./pages/AdminPage'))
 const FrictionsPage = lazy(() => import('./pages/workcraft/FrictionsPage'))
 const TeamFrictionsPage = lazy(() => import('./pages/workcraft/TeamFrictionsPage'))
@@ -83,6 +84,7 @@ export default function App() {
             {/* Working Backwards */}
             <Route path="/wb" element={<WBProjectsPage />} />
             <Route path="/wb/:pid" element={<WBWorkspacePage />} />
+            <Route path="/api-tokens" element={<ApiTokensPage />} />
 
             {/* Assessments */}
             <Route path="/assessments" element={<AssessmentsHubPage />} />

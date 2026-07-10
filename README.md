@@ -155,6 +155,20 @@ users:
 | PATCH| `/api/reports/me/visibility` | 공개/비공개 전환 |
 | GET  | `/api/reports/public` | 공개 리포트 목록 |
 | GET  | `/api/admin/stats` | 관리자 통계 |
+| POST | `/api/tokens` | 개인 API 토큰 발급 (MCP·외부 도구용, `lmk_...`) |
+| POST | `/api/wb/projects/{id}/apply-all` | 인터뷰 정리 내용을 프로젝트 전체에 한 번에 반영 |
+
+---
+
+## 🤖 MCP 연결 — 인터뷰/대화로 채우기
+
+Claude·ChatGPT 같은 생성형 AI가 **대화만으로** Working Backwards 프로젝트를 읽고 채울 수 있는
+**MCP 서버**(`mcp/`)를 제공합니다. 인터뷰를 음성인식으로 정리 → AI가 아이디어·페르소나·문제·PR/FAQ·기능을
+한 번에 구성 → 앱에 반영하는 흐름입니다. (녹음·전사·분석은 생성형 AI가 담당, 앱은 MCP + JSON 계약을 제공)
+
+- 인증: 앱의 **API 토큰** 페이지에서 개인 토큰(`lmk_...`)을 발급해 사용
+- 웹앱에서도 MCP 없이 **인터뷰로 채우기** 버튼(프롬프트 복사 → AI → JSON 붙여넣기)으로 동일하게 가능
+- 설정·사용법: [docs/MCP_GUIDE.md](docs/MCP_GUIDE.md)
 
 ---
 

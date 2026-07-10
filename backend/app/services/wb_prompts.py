@@ -109,6 +109,31 @@ def features_prompt(project, pains) -> str:
     )
 
 
+def interview_prompt(project, transcript: str = "") -> str:
+    """인터뷰/대화 정리 → WB 전체를 한 번에 채우는 프롬프트.
+    음성인식 등으로 얻은 대화 원문을 넣으면 AI가 전체 구조를 JSON으로 정리한다."""
+    base = _project_context(project)
+    src = ("아래 인터뷰/대화 내용을 근거로 정리하세요. 내용에 없는 사실은 지어내지 말고 빈 값으로 두세요.\n\n"
+           "## 인터뷰/대화 원문\n" + transcript.strip() + "\n") if transcript.strip() else \
+          "아래 아이디어 맥락을 바탕으로 합리적으로 구성하세요.\n"
+    return (
+        "당신은 Amazon Working Backwards 퍼실리테이터입니다. "
+        "아이디어를 이해관계자 관점에서 검증할 수 있도록 전체 구조를 한 번에 정리하세요.\n\n"
+        + base + "\n\n" + src + "\n"
+        + _COMMON_RULES +
+        "아래 스키마의 JSON '하나만' 출력하세요. 각 배열은 비어 있어도 됩니다.\n"
+        '{\n'
+        '  "idea": { "one_liner": "", "current_problem": "", "target_user": "", '
+        '"expected_benefit": "", "current_alternative": "", "success_criteria": "", "not_doing": "" },\n'
+        '  "personas": [ { "name": "", "role": "", "goals": "", "pains": "", "fears": "" } ],\n'
+        '  "pains": [ { "title": "", "description": "" } ],\n'
+        '  "features": [ { "name": "", "priority": 1, "reason": "" } ],\n'
+        '  "prfaq": { "headline": "", "subtitle": "", "customer_problem": "", "opportunity": "", '
+        '"solution": "", "cta": "", "faq": [ {"q":"","a":""} ], "risks": [ {"q":"","a":""} ] }\n'
+        '}'
+    )
+
+
 # 붙여넣기 파싱이 기대하는 최상위 키
 STEP_ROOT_KEY = {
     "personas": "personas",

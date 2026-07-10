@@ -489,6 +489,81 @@ def apply_step(pid: int, step: str, body: ApplyBody, persona_id: int = 0,
     raise HTTPException(status_code=404, detail="지원하지 않는 단계입니다")
 
 
+# ─────────────── 인터뷰 모드: 전체 프롬프트 / 전체 적용 ───────────────
+class InterviewPromptBody(BaseModel):
+    transcript: str = ""
+
+
+@router.post("/projects/{pid}/prompt/interview")
+def interview_prompt(pid: int, body: InterviewPromptBody,
+                     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """인터뷰/대화(음성인식 텍스트 등) → WB 전체를 한 번에 정리하는 프롬프트."""
+    p = _get_project(pid, current_user, db)
+    return {"prompt": wb_prompts.interview_prompt(p, body.transcript)}
+
+
+@router.post("/projects/{pid}/apply-all")
+def apply_all(pid: int, body: ApplyBody, replace: bool = False,
+              current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """전체 JSON(idea/personas/pains/features/prfaq)을 한 번에 반영."""
+    project = _get_project(pid, current_user, db)
+    try:
+        data = wb_apply.parse_json_lenient(body.content)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if not isinstance(data, dict):
+        raise HTTPException(status_code=400, detail="객체 형태의 JSON이 필요합니다")
+
+    result = {}
+    # idea — 빈 값이 아닌 필드만 갱신
+    idea = data.get("idea")
+    if isinstance(idea, dict):
+        allowed = {"one_liner", "current_problem", "target_user", "expected_benefit",
+                   "current_alternative", "success_criteria", "not_doing"}
+        n = 0
+        for k, v in idea.items():
+            if k in allowed and isinstance(v, str) and v.strip():
+                setattr(project, k, v.strip()); n += 1
+        result["idea"] = n
+
+    if "personas" in data:
+        if replace:
+            db.query(WBPersona).filter(WBPersona.project_id == pid).delete()
+        items = wb_apply.extract_personas(data["personas"] if isinstance(data.get("personas"), list) else data)
+        for it in items:
+            db.add(WBPersona(project_id=pid, **it))
+        result["personas"] = len(items)
+
+    if "pains" in data:
+        if replace:
+            db.query(WBPainCluster).filter(WBPainCluster.project_id == pid).delete()
+        items = wb_apply.extract_pains(data["pains"] if isinstance(data.get("pains"), list) else data)
+        for it in items:
+            db.add(WBPainCluster(project_id=pid, source="llm", **it))
+        result["pains"] = len(items)
+
+    if "features" in data:
+        if replace:
+            db.query(WBFeature).filter(WBFeature.project_id == pid).delete()
+        items = wb_apply.extract_features(data["features"] if isinstance(data.get("features"), list) else data)
+        for it in items:
+            db.add(WBFeature(project_id=pid, **it))
+        result["features"] = len(items)
+
+    if isinstance(data.get("prfaq"), dict):
+        fields = wb_apply.extract_prfaq(data["prfaq"])
+        pf = db.query(WBPRFAQ).filter(WBPRFAQ.project_id == pid).first()
+        if pf:
+            for k, v in fields.items():
+                setattr(pf, k, v)
+        else:
+            db.add(WBPRFAQ(project_id=pid, **fields))
+        result["prfaq"] = 1
+
+    db.commit()
+    return {"applied": result}
+
+
 # ─────────────── Export (Markdown + LLM 프롬프트) ───────────────
 @router.get("/projects/{pid}/export")
 def export_markdown(pid: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):

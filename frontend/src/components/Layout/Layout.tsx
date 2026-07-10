@@ -6,7 +6,7 @@ import {
   Settings, LogOut, FlaskConical, Lightbulb, Target,
   KanbanSquare, Share2, CalendarDays, Library, LifeBuoy, BarChart3, Sprout,
   Menu, X, ClipboardCheck, Network, Activity, ScrollText, MessagesSquare, Award, GitBranch,
-  Compass,
+  Compass, KeyRound,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
@@ -178,6 +178,10 @@ export function Layout() {
               <div className="text-[11px] text-slate-400 truncate">{user?.department || user?.email}</div>
             </div>
           </div>
+          <NavLink to="/api-tokens" className={({ isActive }) => cn('btn-ghost w-full justify-start', isActive && 'bg-slate-100 text-slate-900')}>
+            <KeyRound className="w-[18px] h-[18px]" />
+            API 토큰
+          </NavLink>
           <button onClick={handleLogout} className="btn-ghost w-full justify-start">
             <LogOut className="w-[18px] h-[18px]" />
             로그아웃
