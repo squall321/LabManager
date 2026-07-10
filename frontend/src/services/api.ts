@@ -182,6 +182,18 @@ export const submitPulse = (responses: Record<string, number>) =>
   api.post('/pulse/submit', { responses }).then((r) => r.data)
 export const getPulseTrends = () => api.get('/pulse/trends').then((r) => r.data)
 
+// Admin — WB domains
+export const listAdminDomains = () => api.get('/admin/wb-domains').then((r) => r.data)
+export const createAdminDomain = (data: any) => api.post('/admin/wb-domains', data).then((r) => r.data)
+export const updateAdminDomain = (id: number, data: any) => api.put(`/admin/wb-domains/${id}`, data).then((r) => r.data)
+export const deleteAdminDomain = (id: number) => api.delete(`/admin/wb-domains/${id}`).then((r) => r.data)
+
+// Admin — backups
+export const listBackups = () => api.get('/admin/backups').then((r) => r.data)
+export const createBackup = () => api.post('/admin/backups').then((r) => r.data)
+export const downloadBackup = (name: string) =>
+  api.get(`/admin/backups/${encodeURIComponent(name)}/download`, { responseType: 'blob' }).then((r) => r.data)
+
 // Admin
 export const getAdminStats = () => api.get('/admin/stats').then((r) => r.data)
 export const getAdminUsers = () => api.get('/admin/users').then((r) => r.data)

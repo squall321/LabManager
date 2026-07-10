@@ -6,8 +6,8 @@ Working Backwards Studio — 정적 데이터 단일 소스
 """
 from typing import Dict, List
 
-# ── CAE/기술 조직 업무 유형 (원문 §14) ──
-DOMAINS: List[Dict] = [
+# ── CAE/기술 조직 업무 유형 기본 프리셋 (원문 §14) — DB 시드용 ──
+DEFAULT_DOMAINS: List[Dict] = [
     {"key": "drop_impact", "name": "Drop / Impact", "desc": "낙하·충격, 각도/위치 sweep, 파손 모드 비교"},
     {"key": "thermal", "name": "Thermal", "desc": "발열 조건, 방열 구조, 온도 분포 비교"},
     {"key": "solder_fatigue", "name": "Solder Fatigue", "desc": "AP/BGA, thermal cycle, field condition"},
@@ -20,6 +20,27 @@ DOMAINS: List[Dict] = [
     {"key": "risk_dashboard", "name": "Reliability Risk Dashboard", "desc": "과제별 리스크 비교"},
     {"key": "other", "name": "기타", "desc": "직접 정의"},
 ]
+
+
+def seed_domains(db) -> int:
+    """DB에 도메인이 비어 있으면 코드 프리셋으로 시드."""
+    from ..models.wb_domain import WBDomain
+    if db.query(WBDomain).count() > 0:
+        return 0
+    for i, d in enumerate(DEFAULT_DOMAINS):
+        db.add(WBDomain(key=d["key"], name=d["name"], description=d["desc"], active=True, order=i))
+    db.commit()
+    return len(DEFAULT_DOMAINS)
+
+
+def domains(db=None) -> List[Dict]:
+    """활성 도메인 목록. db가 있으면 DB에서, 없으면 코드 프리셋(fallback)."""
+    if db is not None:
+        from ..models.wb_domain import WBDomain
+        rows = db.query(WBDomain).filter(WBDomain.active == True).order_by(WBDomain.order, WBDomain.id).all()
+        if rows:
+            return [{"key": r.key, "name": r.name, "desc": r.description} for r in rows]
+    return DEFAULT_DOMAINS
 
 # ── 기본 이해관계자 역할 프리셋 (원문 §9.2) ──
 ROLE_PRESETS: List[Dict] = [
@@ -94,9 +115,16 @@ def verdict_for(total: int) -> str:
 DITL_TIME_BLOCKS = ["오전", "점심 전", "오후", "저녁"]
 
 
-def meta() -> Dict:
+def domain_name(key: str, db=None) -> str:
+    for d in domains(db):
+        if d["key"] == key:
+            return d["name"]
+    return key
+
+
+def meta(db=None) -> Dict:
     return {
-        "domains": DOMAINS,
+        "domains": domains(db),
         "role_presets": ROLE_PRESETS,
         "validation_items": VALIDATION_ITEMS,
         "validation_max": VALIDATION_MAX,

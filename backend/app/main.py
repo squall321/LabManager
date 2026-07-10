@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from .core.database import engine, Base, SessionLocal
 from .models import (  # noqa: F401
     user, survey, workcraft, assessment, pulse, agreement, reflection, kudos, decision,
-    working_backwards,
+    working_backwards, wb_domain,
 )
 from .api import (
     auth, survey as survey_router, reports, admin,
@@ -23,10 +23,12 @@ async def lifespan(app: FastAPI):
     # 개발 편의용 자동 테이블 생성 (운영에서는 AUTO_CREATE_ALL=false + Alembic)
     if settings.AUTO_CREATE_ALL:
         Base.metadata.create_all(bind=engine)
-    # YAML 사용자 동기화
+    # YAML 사용자 동기화 + WB 도메인 프리셋 시드
     db = SessionLocal()
     try:
         load_users_from_yaml(db)
+        from .services.wb_data import seed_domains
+        seed_domains(db)
     finally:
         db.close()
     yield

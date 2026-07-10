@@ -28,8 +28,8 @@ router = APIRouter(prefix="/wb", tags=["Working Backwards"])
 
 # ─────────────── 메타 / 페르소나 후보 ───────────────
 @router.get("/meta")
-def meta(current_user: User = Depends(get_current_user)):
-    return wb_data.meta()
+def meta(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return wb_data.meta(db)
 
 
 @router.get("/persona-candidates", response_model=List[PersonaCandidate])

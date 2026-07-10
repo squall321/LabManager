@@ -10,6 +10,8 @@ import {
   getAllReports, updateReportVisibility, toggleUserActive,
 } from '../services/api'
 import { BIRKMAN_COLORS } from '../lib/utils'
+import { DomainManager } from '../components/admin/DomainManager'
+import { BackupPanel } from '../components/admin/BackupPanel'
 import type { User, Report } from '../types'
 
 export default function AdminPage() {
@@ -242,6 +244,12 @@ export default function AdminPage() {
           </div>
         )}
       </motion.div>
+
+      {/* 업무 유형 관리 (Working Backwards) */}
+      <DomainManager />
+
+      {/* 데이터 백업 */}
+      <BackupPanel />
     </div>
   )
 }

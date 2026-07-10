@@ -17,7 +17,7 @@ _COMMON_RULES = (
 
 
 def _project_context(project, personas=None, pains=None) -> str:
-    domain = next((d["name"] for d in wb_data.DOMAINS if d["key"] == project.domain), project.domain)
+    domain = wb_data.domain_name(project.domain)
     # 값이 있는 필드만 넣어 프롬프트 품질을 높인다 (빈 라인 제거)
     fields = [
         ("이름", project.name), ("업무 유형", domain), ("한 줄 설명", project.one_liner),

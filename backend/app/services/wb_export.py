@@ -22,7 +22,7 @@ def _qa_block(items: List[dict]) -> str:
 
 
 def to_markdown(project, personas, pains, prfaq, features, validation) -> str:
-    domain_name = next((d["name"] for d in wb_data.DOMAINS if d["key"] == project.domain), project.domain)
+    domain_name = wb_data.domain_name(project.domain)
     md = [f"# {project.name}", ""]
     if project.one_liner:
         md.append(f"> {project.one_liner}")
