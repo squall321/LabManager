@@ -134,6 +134,44 @@ export const createAgreement = (data: any) => api.post('/agreements', data).then
 export const deleteAgreement = (id: number) => api.delete(`/agreements/${id}`).then((r) => r.data)
 export const toggleAgreementAgree = (id: number) => api.post(`/agreements/${id}/agree`).then((r) => r.data)
 
+// Working Backwards
+export const getWBMeta = () => api.get('/wb/meta').then((r) => r.data)
+export const getPersonaCandidates = () => api.get('/wb/persona-candidates').then((r) => r.data)
+export const listWBProjects = () => api.get('/wb/projects').then((r) => r.data)
+export const createWBProject = (data: any) => api.post('/wb/projects', data).then((r) => r.data)
+export const createWBFromMission = (missionId: number) =>
+  api.post(`/wb/projects/from-mission/${missionId}`).then((r) => r.data)
+export const getWBProject = (id: number) => api.get(`/wb/projects/${id}`).then((r) => r.data)
+export const updateWBProject = (id: number, data: any) => api.put(`/wb/projects/${id}`, data).then((r) => r.data)
+export const deleteWBProject = (id: number) => api.delete(`/wb/projects/${id}`).then((r) => r.data)
+
+export const listPersonas = (pid: number) => api.get(`/wb/projects/${pid}/personas`).then((r) => r.data)
+export const addPersona = (pid: number, data: any) => api.post(`/wb/projects/${pid}/personas`, data).then((r) => r.data)
+export const updatePersona = (pid: number, id: number, data: any) => api.put(`/wb/projects/${pid}/personas/${id}`, data).then((r) => r.data)
+export const deletePersona = (pid: number, id: number) => api.delete(`/wb/projects/${pid}/personas/${id}`).then((r) => r.data)
+export const setScenarios = (pid: number, id: number, scenarios: any[]) =>
+  api.put(`/wb/projects/${pid}/personas/${id}/scenarios`, scenarios).then((r) => r.data)
+
+export const listPains = (pid: number) => api.get(`/wb/projects/${pid}/pains`).then((r) => r.data)
+export const addPain = (pid: number, data: any) => api.post(`/wb/projects/${pid}/pains`, data).then((r) => r.data)
+export const deletePain = (pid: number, id: number) => api.delete(`/wb/projects/${pid}/pains/${id}`).then((r) => r.data)
+export const importPains = (pid: number) => api.post(`/wb/projects/${pid}/pains/import`).then((r) => r.data)
+
+export const getPRFAQ = (pid: number) => api.get(`/wb/projects/${pid}/prfaq`).then((r) => r.data)
+export const savePRFAQ = (pid: number, data: any) => api.put(`/wb/projects/${pid}/prfaq`, data).then((r) => r.data)
+export const genPRFAQ = (pid: number) => api.post(`/wb/projects/${pid}/generate/prfaq-skeleton`).then((r) => r.data)
+export const genTodayStatements = (pid: number) => api.post(`/wb/projects/${pid}/generate/today-statements`).then((r) => r.data)
+
+export const listFeatures = (pid: number) => api.get(`/wb/projects/${pid}/features`).then((r) => r.data)
+export const addFeature = (pid: number, data: any) => api.post(`/wb/projects/${pid}/features`, data).then((r) => r.data)
+export const updateFeature = (pid: number, id: number, data: any) => api.put(`/wb/projects/${pid}/features/${id}`, data).then((r) => r.data)
+export const deleteFeature = (pid: number, id: number) => api.delete(`/wb/projects/${pid}/features/${id}`).then((r) => r.data)
+
+export const getValidation = (pid: number) => api.get(`/wb/projects/${pid}/validation`).then((r) => r.data)
+export const saveValidation = (pid: number, data: any) => api.put(`/wb/projects/${pid}/validation`, data).then((r) => r.data)
+export const getValidationHints = (pid: number) => api.get(`/wb/projects/${pid}/validation/hints`).then((r) => r.data)
+export const exportWB = (pid: number) => api.get(`/wb/projects/${pid}/export`).then((r) => r.data)
+
 // Weekly Pulse
 export const getPulseCurrent = () => api.get('/pulse/current').then((r) => r.data)
 export const submitPulse = (responses: Record<string, number>) =>

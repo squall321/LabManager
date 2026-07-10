@@ -1,0 +1,509 @@
+import { useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { motion } from 'framer-motion'
+import {
+  Compass, Loader2, ArrowLeft, Lightbulb, Users2, Map, AlertTriangle,
+  MessageSquare as MessageSquareQuote, ListChecks, Gauge, FileDown, Plus, Trash2, Wand2, Copy, Check,
+  Download, Sparkles, UserPlus,
+} from 'lucide-react'
+import * as api from '../../services/api'
+import { getWBMeta } from '../../services/api'
+import { toast } from '../../store/toastStore'
+import { BIRKMAN_COLORS } from '../../lib/utils'
+import type { WBProject, WBMeta, WBPersona, PersonaCandidate, WBPain, WBPRFAQ, WBFeature, WBValidation } from '../../types'
+import { cn } from '../../lib/utils'
+
+const STEPS = [
+  { key: 'idea', label: 'Idea Canvas', icon: Lightbulb },
+  { key: 'persona', label: '페르소나', icon: Users2 },
+  { key: 'ditl', label: 'Day in the Life', icon: Map },
+  { key: 'pain', label: 'Pain Cluster', icon: AlertTriangle },
+  { key: 'prfaq', label: 'PR/FAQ', icon: MessageSquareQuote },
+  { key: 'feature', label: '기능 백로그', icon: ListChecks },
+  { key: 'validation', label: '검증 & MVP', icon: Gauge },
+  { key: 'report', label: '리포트', icon: FileDown },
+] as const
+
+export default function WBWorkspacePage() {
+  const { pid: pidStr } = useParams()
+  const pid = Number(pidStr)
+  const navigate = useNavigate()
+  const [step, setStep] = useState<string>('idea')
+
+  const { data: project, isLoading } = useQuery<WBProject>({ queryKey: ['wb-project', pid], queryFn: () => api.getWBProject(pid), retry: false })
+  const { data: meta } = useQuery<WBMeta>({ queryKey: ['wb-meta'], queryFn: getWBMeta })
+
+  if (isLoading) return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 text-brand-500 animate-spin" /></div>
+  if (!project || !meta) return (
+    <div className="text-center py-20">
+      <p className="text-slate-500 mb-4">프로젝트를 찾을 수 없습니다.</p>
+      <button onClick={() => navigate('/wb')} className="btn-secondary">프로젝트 목록</button>
+    </div>
+  )
+
+  return (
+    <div className="space-y-5">
+      <button onClick={() => navigate('/wb')} className="btn-ghost -ml-2"><ArrowLeft className="w-4 h-4" /> 프로젝트 목록</button>
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+        <div className="flex items-center gap-2 text-brand-600 text-sm font-semibold mb-1"><Compass className="w-4 h-4" /> Working Backwards</div>
+        <h1 className="text-2xl font-bold text-slate-900">{project.name}</h1>
+        {project.one_liner && <p className="text-slate-500 mt-0.5">{project.one_liner}</p>}
+      </motion.div>
+
+      <div className="grid lg:grid-cols-[200px_1fr] gap-6">
+        {/* Step nav */}
+        <div className="lg:sticky lg:top-4 h-fit">
+          <div className="flex lg:flex-col gap-1.5 overflow-x-auto pb-2 lg:pb-0">
+            {STEPS.map((s, i) => (
+              <button key={s.key} onClick={() => setStep(s.key)}
+                className={cn('flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all',
+                  step === s.key ? 'bg-brand-50 text-brand-700 shadow-sm' : 'text-slate-500 hover:bg-slate-50')}>
+                <span className={cn('w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0',
+                  step === s.key ? 'bg-brand-500 text-white' : 'bg-slate-200 text-slate-500')}>{i + 1}</span>
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Step content */}
+        <div className="min-w-0">
+          {step === 'idea' && <IdeaStep project={project} meta={meta} />}
+          {step === 'persona' && <PersonaStep pid={pid} />}
+          {step === 'ditl' && <DITLStep pid={pid} meta={meta} />}
+          {step === 'pain' && <PainStep pid={pid} />}
+          {step === 'prfaq' && <PRFAQStep pid={pid} />}
+          {step === 'feature' && <FeatureStep pid={pid} />}
+          {step === 'validation' && <ValidationStep pid={pid} meta={meta} />}
+          {step === 'report' && <ReportStep pid={pid} name={project.name} />}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Step 1: Idea Canvas ──
+function IdeaStep({ project, meta }: { project: WBProject; meta: WBMeta }) {
+  const queryClient = useQueryClient()
+  const [form, setForm] = useState({
+    name: project.name, domain: project.domain, one_liner: project.one_liner, current_problem: project.current_problem,
+    target_user: project.target_user, expected_benefit: project.expected_benefit,
+    current_alternative: project.current_alternative, success_criteria: project.success_criteria, not_doing: project.not_doing,
+  })
+  const saveMut = useMutation({
+    mutationFn: () => api.updateWBProject(project.id, form),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['wb-project', project.id] }); toast.success('저장했어요') },
+    onError: () => toast.error('저장 실패'),
+  })
+  const set = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }))
+  const field = (k: keyof typeof form, label: string, ph = '', area = false) => (
+    <div>
+      <label className="label">{label}</label>
+      {area
+        ? <textarea className="input-field mt-1.5 min-h-[64px]" value={form[k]} onChange={(e) => set(k, e.target.value)} placeholder={ph} />
+        : <input className="input-field mt-1.5" value={form[k]} onChange={(e) => set(k, e.target.value)} placeholder={ph} />}
+    </div>
+  )
+  return (
+    <div className="card space-y-4">
+      <h2 className="section-title">Idea Canvas</h2>
+      <div className="grid md:grid-cols-2 gap-4">
+        {field('name', '아이디어 이름 *')}
+        <div>
+          <label className="label">업무 유형</label>
+          <select className="input-field mt-1.5" value={form.domain} onChange={(e) => set('domain', e.target.value)}>
+            {meta.domains.map((d) => <option key={d.key} value={d.key}>{d.name}</option>)}
+          </select>
+        </div>
+      </div>
+      {field('one_liner', '한 줄 설명')}
+      {field('current_problem', '현재 문제', '지금 무엇이 불편/비효율인가', true)}
+      <div className="grid md:grid-cols-2 gap-4">
+        {field('target_user', '대상 사용자')}
+        {field('current_alternative', '기존 대체 수단', '엑셀·스크립트·수동 리포트')}
+      </div>
+      {field('expected_benefit', '기대 효과', '', true)}
+      <div className="grid md:grid-cols-2 gap-4">
+        {field('success_criteria', '성공 기준')}
+        {field('not_doing', '하지 않을 것')}
+      </div>
+      <div className="flex justify-end">
+        <button onClick={() => saveMut.mutate()} disabled={saveMut.isPending} className="btn-primary">
+          {saveMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : '저장'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Step 2: Persona ──
+function PersonaStep({ pid }: { pid: number }) {
+  const queryClient = useQueryClient()
+  const [showAdd, setShowAdd] = useState(false)
+  const { data: personas } = useQuery<WBPersona[]>({ queryKey: ['wb-personas', pid], queryFn: () => api.listPersonas(pid) })
+  const { data: candidates } = useQuery<PersonaCandidate[]>({ queryKey: ['wb-candidates'], queryFn: api.getPersonaCandidates })
+  const inval = () => queryClient.invalidateQueries({ queryKey: ['wb-personas', pid] })
+
+  const addFromCandidate = useMutation({
+    mutationFn: (c: PersonaCandidate) => api.addPersona(pid, { name: c.name, role: '이해관계자', source_user_id: c.user_id }),
+    onSuccess: () => { inval(); toast.success('페르소나를 추가했어요') },
+    onError: () => toast.error('추가 실패'),
+  })
+  const addBlank = useMutation({
+    mutationFn: () => api.addPersona(pid, { name: '새 페르소나', role: '' }),
+    onSuccess: () => { inval() },
+  })
+  const genToday = useMutation({
+    mutationFn: () => api.genTodayStatements(pid),
+    onSuccess: () => { inval(); toast.success("Today's Statement를 생성했어요") },
+  })
+  const del = useMutation({ mutationFn: (id: number) => api.deletePersona(pid, id), onSuccess: inval })
+
+  const existingSources = new Set((personas ?? []).map((p) => p.source_user_id))
+
+  return (
+    <div className="space-y-4">
+      {/* 실제 동료(협업 스타일) 후보 */}
+      <div className="card">
+        <h2 className="section-title mb-1 flex items-center gap-2"><Sparkles className="w-4 h-4 text-brand-500" /> 실제 동료로 페르소나 만들기</h2>
+        <p className="text-sm text-slate-400 mb-3">공개된 협업 스타일 리포트를 가진 동료. 선택하면 스타일에 맞는 관심사·반론이 자동 채워져요.</p>
+        {!candidates || candidates.length === 0 ? (
+          <p className="text-sm text-slate-400">공개된 협업 스타일 리포트가 아직 없어요.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {candidates.map((c) => (
+              <button key={c.user_id} disabled={existingSources.has(c.user_id) || addFromCandidate.isPending}
+                onClick={() => addFromCandidate.mutate(c)}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 hover:border-brand-300 text-sm disabled:opacity-40 transition-all">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: BIRKMAN_COLORS[c.style_code]?.hex }} />
+                {c.name} <span className="text-xs text-slate-400">{c.keyword}</span>
+                {existingSources.has(c.user_id) ? <Check className="w-3.5 h-3.5 text-green-500" /> : <UserPlus className="w-3.5 h-3.5 text-slate-400" />}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-slate-700">페르소나 {personas?.length ? `(${personas.length})` : ''}</h3>
+        <div className="flex gap-2">
+          {personas && personas.length > 0 && (
+            <button onClick={() => genToday.mutate()} disabled={genToday.isPending} className="btn-secondary text-sm">
+              {genToday.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Wand2 className="w-4 h-4" /> Today's Statement 생성</>}
+            </button>
+          )}
+          <button onClick={() => addBlank.mutate()} className="btn-secondary text-sm"><Plus className="w-4 h-4" /> 빈 페르소나</button>
+        </div>
+      </div>
+
+      {!personas || personas.length === 0 ? (
+        <div className="card text-center py-10 text-sm text-slate-400">위에서 동료를 선택하거나 빈 페르소나를 추가하세요.</div>
+      ) : personas.map((p) => <PersonaCard key={p.id} pid={pid} persona={p} onDelete={() => del.mutate(p.id)} onChange={inval} />)}
+    </div>
+  )
+}
+
+function PersonaCard({ pid, persona, onDelete, onChange }: { pid: number; persona: WBPersona; onDelete: () => void; onChange: () => void }) {
+  const [f, setF] = useState({ name: persona.name, role: persona.role, goals: persona.goals, fears: persona.fears, comm_style: persona.comm_style, today_statement: persona.today_statement })
+  const save = useMutation({ mutationFn: () => api.updatePersona(pid, persona.id, f), onSuccess: () => { onChange(); toast.success('저장했어요') }, onError: () => toast.error('저장 실패') })
+  const set = (k: string, v: string) => setF((p) => ({ ...p, [k]: v }))
+  return (
+    <div className="card">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-2">
+          {persona.style_code && <span className="w-3 h-3 rounded-full" style={{ backgroundColor: BIRKMAN_COLORS[persona.style_code]?.hex }} />}
+          <input className="font-semibold text-slate-900 bg-transparent border-b border-transparent focus:border-slate-300 focus:outline-none" value={f.name} onChange={(e) => set('name', e.target.value)} />
+          <input className="text-sm text-slate-500 bg-transparent border-b border-transparent focus:border-slate-300 focus:outline-none w-28" value={f.role} onChange={(e) => set('role', e.target.value)} placeholder="역할" />
+        </div>
+        <button onClick={onDelete} className="text-slate-300 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+      </div>
+      <div className="grid md:grid-cols-2 gap-3">
+        <div><label className="label">관심사</label><textarea className="input-field mt-1 min-h-[52px] text-sm" value={f.goals} onChange={(e) => set('goals', e.target.value)} /></div>
+        <div><label className="label">두려움</label><textarea className="input-field mt-1 min-h-[52px] text-sm" value={f.fears} onChange={(e) => set('fears', e.target.value)} /></div>
+      </div>
+      <div className="mt-3"><label className="label">소통 방식</label><textarea className="input-field mt-1 min-h-[44px] text-sm" value={f.comm_style} onChange={(e) => set('comm_style', e.target.value)} /></div>
+      <div className="mt-3"><label className="label">Today's Statement</label><textarea className="input-field mt-1 min-h-[52px] text-sm" value={f.today_statement} onChange={(e) => set('today_statement', e.target.value)} placeholder="자동 생성 버튼으로 채우거나 직접 작성" /></div>
+      <div className="flex justify-end mt-3"><button onClick={() => save.mutate()} disabled={save.isPending} className="btn-secondary text-sm">{save.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : '저장'}</button></div>
+    </div>
+  )
+}
+
+// ── Step 3: Day in the Life ──
+function DITLStep({ pid, meta }: { pid: number; meta: WBMeta }) {
+  const { data: personas } = useQuery<WBPersona[]>({ queryKey: ['wb-personas', pid], queryFn: () => api.listPersonas(pid) })
+  if (!personas || personas.length === 0) return <div className="card text-center py-10 text-sm text-slate-400">먼저 페르소나를 추가하세요.</div>
+  return <div className="space-y-4">{personas.map((p) => <DITLCard key={p.id} pid={pid} persona={p} timeBlocks={meta.time_blocks} />)}</div>
+}
+
+function DITLCard({ pid, persona, timeBlocks }: { pid: number; persona: WBPersona; timeBlocks: string[] }) {
+  const queryClient = useQueryClient()
+  const [rows, setRows] = useState(persona.scenarios.length ? persona.scenarios.map((s) => ({ ...s })) : timeBlocks.map((t, i) => ({ time_block: t, activity: '', pain_point: '', opportunity: '', order: i })))
+  const save = useMutation({
+    mutationFn: () => api.setScenarios(pid, persona.id, rows),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['wb-personas', pid] }); toast.success('시나리오를 저장했어요') },
+    onError: () => toast.error('저장 실패'),
+  })
+  const setRow = (i: number, k: string, v: string) => setRows((rs) => rs.map((r, j) => j === i ? { ...r, [k]: v } : r))
+  return (
+    <div className="card">
+      <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+        {persona.style_code && <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: BIRKMAN_COLORS[persona.style_code]?.hex }} />}
+        {persona.name}의 하루
+      </h3>
+      <div className="space-y-2">
+        {rows.map((r, i) => (
+          <div key={i} className="grid grid-cols-[70px_1fr_1fr] gap-2 items-center">
+            <span className="text-xs font-medium text-slate-500">{r.time_block}</span>
+            <input className="input-field !py-2 text-sm" value={r.activity} onChange={(e) => setRow(i, 'activity', e.target.value)} placeholder="하는 일" />
+            <input className="input-field !py-2 text-sm" value={r.pain_point} onChange={(e) => setRow(i, 'pain_point', e.target.value)} placeholder="문제/불편" />
+          </div>
+        ))}
+      </div>
+      <div className="flex justify-end mt-3"><button onClick={() => save.mutate()} disabled={save.isPending} className="btn-secondary text-sm">{save.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : '저장'}</button></div>
+    </div>
+  )
+}
+
+// ── Step 4: Pain Cluster ──
+function PainStep({ pid }: { pid: number }) {
+  const queryClient = useQueryClient()
+  const [title, setTitle] = useState('')
+  const { data: pains } = useQuery<WBPain[]>({ queryKey: ['wb-pains', pid], queryFn: () => api.listPains(pid) })
+  const inval = () => queryClient.invalidateQueries({ queryKey: ['wb-pains', pid] })
+  const add = useMutation({ mutationFn: () => api.addPain(pid, { title, description: '' }), onSuccess: () => { setTitle(''); inval() } })
+  const del = useMutation({ mutationFn: (id: number) => api.deletePain(pid, id), onSuccess: inval })
+  const imp = useMutation({
+    mutationFn: () => api.importPains(pid),
+    onSuccess: (r) => { inval(); toast.success(`${r.imported}건 가져왔어요`) },
+    onError: () => toast.error('가져오기 실패'),
+  })
+  const badge = (s: string) => s === 'friction' ? 'WorkCraft 불편함' : s === 'reflection' ? '협업 회고' : '직접'
+  return (
+    <div className="space-y-4">
+      <div className="card">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="section-title">Pain Cluster</h2>
+          <button onClick={() => imp.mutate()} disabled={imp.isPending} className="btn-secondary text-sm">
+            {imp.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Sparkles className="w-4 h-4" /> WorkCraft에서 가져오기</>}
+          </button>
+        </div>
+        <p className="text-sm text-slate-400 mb-3">공유 불편함·협업 회고(익명)에서 실제 반복 문제를 시드할 수 있어요.</p>
+        <div className="flex gap-2">
+          <input className="input-field" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="문제 그룹 추가 (예: 반복 세팅)"
+            onKeyDown={(e) => { if (e.key === 'Enter' && title.trim()) add.mutate() }} />
+          <button onClick={() => add.mutate()} disabled={!title.trim() || add.isPending} className="btn-primary"><Plus className="w-4 h-4" /></button>
+        </div>
+      </div>
+      {pains && pains.length > 0 && (
+        <div className="space-y-2">
+          {pains.map((p) => (
+            <div key={p.id} className="card !py-3 flex items-center justify-between group">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-slate-800">{p.title}</span>
+                  <span className={cn('text-[11px] px-1.5 py-0.5 rounded', p.source === 'manual' ? 'bg-slate-100 text-slate-500' : 'bg-brand-50 text-brand-600')}>{badge(p.source)}</span>
+                </div>
+                {p.description && <p className="text-sm text-slate-500 mt-0.5">{p.description}</p>}
+              </div>
+              <button onClick={() => del.mutate(p.id)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-4 h-4" /></button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Step 5: PR/FAQ ──
+function PRFAQStep({ pid }: { pid: number }) {
+  const queryClient = useQueryClient()
+  const { data, isLoading } = useQuery<WBPRFAQ>({ queryKey: ['wb-prfaq', pid], queryFn: () => api.getPRFAQ(pid), retry: false })
+  const gen = useMutation({
+    mutationFn: () => api.genPRFAQ(pid),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['wb-prfaq', pid] }); toast.success('PR/FAQ 초안을 생성했어요') },
+    onError: () => toast.error('생성 실패'),
+  })
+  if (isLoading) return <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 text-brand-500 animate-spin" /></div>
+  if (!data) return (
+    <div className="card text-center py-12">
+      <MessageSquareQuote className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+      <p className="text-slate-500 mb-4">아이디어·페르소나·Pain을 바탕으로 PR/FAQ 초안을 만들어보세요.<br />페르소나 스타일 기반 반론이 자동 포함됩니다.</p>
+      <button onClick={() => gen.mutate()} disabled={gen.isPending} className="btn-primary">
+        {gen.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Wand2 className="w-4 h-4" /> PR/FAQ 초안 생성</>}
+      </button>
+    </div>
+  )
+  return <PRFAQEditor pid={pid} data={data} onRegen={() => gen.mutate()} regenerating={gen.isPending} />
+}
+
+function PRFAQEditor({ pid, data, onRegen, regenerating }: { pid: number; data: WBPRFAQ; onRegen: () => void; regenerating: boolean }) {
+  const queryClient = useQueryClient()
+  const [f, setF] = useState<WBPRFAQ>({ ...data, faq: data.faq ?? [], risks: data.risks ?? [] })
+  const save = useMutation({
+    mutationFn: () => api.savePRFAQ(pid, f),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['wb-prfaq', pid] }); toast.success('저장했어요') },
+    onError: () => toast.error('저장 실패'),
+  })
+  const set = (k: keyof WBPRFAQ, v: string) => setF((p) => ({ ...p, [k]: v }))
+  const setQA = (field: 'faq' | 'risks', i: number, k: 'q' | 'a', v: string) =>
+    setF((p) => ({ ...p, [field]: p[field].map((x, j) => j === i ? { ...x, [k]: v } : x) }))
+  const ta = (k: keyof WBPRFAQ, label: string) => (
+    <div><label className="label">{label}</label><textarea className="input-field mt-1 min-h-[52px] text-sm" value={f[k] as string} onChange={(e) => set(k, e.target.value)} /></div>
+  )
+  return (
+    <div className="card space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="section-title">PR/FAQ</h2>
+        <button onClick={onRegen} disabled={regenerating} className="btn-secondary text-sm">{regenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Wand2 className="w-4 h-4" /> 다시 생성</>}</button>
+      </div>
+      <div><label className="label">헤드라인</label><input className="input-field mt-1" value={f.headline} onChange={(e) => set('headline', e.target.value)} /></div>
+      <div><label className="label">부제목</label><input className="input-field mt-1" value={f.subtitle} onChange={(e) => set('subtitle', e.target.value)} /></div>
+      {ta('customer_problem', '고객 문제')}
+      {ta('opportunity', '기회 / 자동화 필요성')}
+      {ta('solution', '솔루션')}
+      {ta('leader_quote', '리더 인용문')}
+      {ta('cta', '행동 유도')}
+      <div>
+        <label className="label">FAQ</label>
+        <div className="space-y-2 mt-1">
+          {f.faq.map((qa, i) => (
+            <div key={i} className="space-y-1">
+              <input className="input-field !py-2 text-sm font-medium" value={qa.q} onChange={(e) => setQA('faq', i, 'q', e.target.value)} placeholder="질문" />
+              <input className="input-field !py-2 text-sm" value={qa.a} onChange={(e) => setQA('faq', i, 'a', e.target.value)} placeholder="답변" />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div>
+        <label className="label flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5 text-amber-500" /> 리스크 · 반론 <span className="text-[11px] text-slate-400">(페르소나 스타일 기반 자동 초안)</span></label>
+        <div className="space-y-2 mt-1">
+          {f.risks.map((qa, i) => (
+            <div key={i} className="space-y-1">
+              <input className="input-field !py-2 text-sm font-medium" value={qa.q} onChange={(e) => setQA('risks', i, 'q', e.target.value)} placeholder="예상 반론" />
+              <input className="input-field !py-2 text-sm" value={qa.a} onChange={(e) => setQA('risks', i, 'a', e.target.value)} placeholder="대응 (직접 작성)" />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="flex justify-end"><button onClick={() => save.mutate()} disabled={save.isPending} className="btn-primary">{save.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : '저장'}</button></div>
+    </div>
+  )
+}
+
+// ── Step 6: Feature Backlog ──
+function FeatureStep({ pid }: { pid: number }) {
+  const queryClient = useQueryClient()
+  const [form, setForm] = useState({ name: '', priority: 3, reason: '' })
+  const { data: features } = useQuery<WBFeature[]>({ queryKey: ['wb-features', pid], queryFn: () => api.listFeatures(pid) })
+  const inval = () => queryClient.invalidateQueries({ queryKey: ['wb-features', pid] })
+  const add = useMutation({ mutationFn: () => api.addFeature(pid, form), onSuccess: () => { setForm({ name: '', priority: 3, reason: '' }); inval() } })
+  const del = useMutation({ mutationFn: (id: number) => api.deleteFeature(pid, id), onSuccess: inval })
+  return (
+    <div className="space-y-4">
+      <div className="card">
+        <h2 className="section-title mb-3">기능 백로그</h2>
+        <div className="grid md:grid-cols-[1fr_80px] gap-2">
+          <input className="input-field" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="기능명 (예: 케이스 자동 생성)" />
+          <select className="input-field" value={form.priority} onChange={(e) => setForm((p) => ({ ...p, priority: Number(e.target.value) }))}>
+            {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>P{n}</option>)}
+          </select>
+        </div>
+        <input className="input-field mt-2" value={form.reason} onChange={(e) => setForm((p) => ({ ...p, reason: e.target.value }))} placeholder="이유 (왜 이 우선순위인가)" />
+        <div className="flex justify-end mt-2"><button onClick={() => add.mutate()} disabled={!form.name.trim() || add.isPending} className="btn-primary text-sm"><Plus className="w-4 h-4" /> 추가</button></div>
+      </div>
+      {features && features.length > 0 && (
+        <div className="card !p-0 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead><tr className="text-left text-slate-400 border-b border-slate-100"><th className="px-4 py-2.5 w-12">우선</th><th className="px-4 py-2.5">기능</th><th className="px-4 py-2.5">이유</th><th></th></tr></thead>
+            <tbody>
+              {features.map((f) => (
+                <tr key={f.id} className="border-b border-slate-50 group">
+                  <td className="px-4 py-2.5"><span className="inline-flex w-6 h-6 items-center justify-center rounded-lg bg-brand-50 text-brand-700 text-xs font-bold">{f.priority}</span></td>
+                  <td className="px-4 py-2.5 font-medium text-slate-800">{f.name}</td>
+                  <td className="px-4 py-2.5 text-slate-500">{f.reason}</td>
+                  <td className="px-4 py-2.5 text-right"><button onClick={() => del.mutate(f.id)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100"><Trash2 className="w-4 h-4" /></button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Step 7: Validation & MVP ──
+function ValidationStep({ pid, meta }: { pid: number; meta: WBMeta }) {
+  const queryClient = useQueryClient()
+  const { data } = useQuery<WBValidation>({ queryKey: ['wb-validation', pid], queryFn: () => api.getValidation(pid), retry: false })
+  const { data: hints } = useQuery<any>({ queryKey: ['wb-hints', pid], queryFn: () => api.getValidationHints(pid) })
+  const [scores, setScores] = useState<Record<string, number>>(data?.scores || {})
+  const save = useMutation({
+    mutationFn: () => api.saveValidation(pid, { scores, note: data?.note || '' }),
+    onSuccess: (v) => { queryClient.invalidateQueries({ queryKey: ['wb-validation', pid] }); setScores(v.scores); toast.success(`총점 ${v.total}/${meta.validation_max}`) },
+    onError: () => toast.error('저장 실패'),
+  })
+  const total = Object.values(scores).reduce((a, b) => a + b, 0)
+  const applyHint = (key: string) => hints?.[key] != null && setScores((s) => ({ ...s, [key]: hints[key] }))
+  return (
+    <div className="card space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="section-title">검증 점수 & MVP</h2>
+        <div className="text-right"><span className="text-2xl font-bold text-brand-600">{total}</span><span className="text-slate-400 text-sm"> / {meta.validation_max}</span></div>
+      </div>
+      <div className="space-y-3">
+        {meta.validation_items.map((item) => (
+          <div key={item.key}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm text-slate-700">{item.label} <span className="text-xs text-slate-400">· {item.question}</span></span>
+              <div className="flex items-center gap-2">
+                {item.auto && hints?.[item.key] != null && (
+                  <button onClick={() => applyHint(item.key)} className="text-[11px] text-brand-600 hover:underline" title={hints.explain?.[item.key]}>추천 {hints[item.key]}</button>
+                )}
+                <span className="text-sm font-bold text-slate-800 w-4 text-right">{scores[item.key] || '-'}</span>
+              </div>
+            </div>
+            <div className="flex gap-1">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button key={n} onClick={() => setScores((s) => ({ ...s, [item.key]: n }))}
+                  className={cn('flex-1 h-7 rounded-md text-xs font-medium transition-all',
+                    (scores[item.key] || 0) >= n ? 'bg-brand-500 text-white' : 'bg-slate-100 text-slate-400 hover:bg-slate-200')}>{n}</button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      {data?.verdict && <div className="rounded-xl bg-brand-50 border border-brand-100 p-3.5 text-sm text-brand-800">{data.verdict}</div>}
+      <div className="flex justify-end"><button onClick={() => save.mutate()} disabled={save.isPending} className="btn-primary">{save.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : '판정 저장'}</button></div>
+    </div>
+  )
+}
+
+// ── Step 8: Report ──
+function ReportStep({ pid, name }: { pid: number; name: string }) {
+  const [copied, setCopied] = useState('')
+  const { data, isLoading } = useQuery<{ markdown: string; llm_prompt: string }>({ queryKey: ['wb-export', pid], queryFn: () => api.exportWB(pid) })
+  if (isLoading || !data) return <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 text-brand-500 animate-spin" /></div>
+  const copy = (text: string, which: string) => { navigator.clipboard.writeText(text); setCopied(which); setTimeout(() => setCopied(''), 1600) }
+  const download = () => {
+    const blob = new Blob([data.markdown], { type: 'text/markdown' })
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${name}.md`; a.click()
+  }
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-end gap-2">
+        <button onClick={() => copy(data.llm_prompt, 'llm')} className="btn-secondary text-sm">{copied === 'llm' ? <><Check className="w-4 h-4" /> 복사됨</> : <><Wand2 className="w-4 h-4" /> Claude 다듬기 프롬프트 복사</>}</button>
+        <button onClick={() => copy(data.markdown, 'md')} className="btn-secondary text-sm">{copied === 'md' ? <><Check className="w-4 h-4" /> 복사됨</> : <><Copy className="w-4 h-4" /> Markdown 복사</>}</button>
+        <button onClick={download} className="btn-primary text-sm"><Download className="w-4 h-4" /> 다운로드</button>
+      </div>
+      <div className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden shadow-lg">
+        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-800">
+          <span className="w-3 h-3 rounded-full bg-red-400" /><span className="w-3 h-3 rounded-full bg-amber-400" /><span className="w-3 h-3 rounded-full bg-green-400" />
+          <span className="text-xs text-slate-400 ml-2 font-mono">{name}.md</span>
+        </div>
+        <pre className="p-5 text-[13px] leading-relaxed text-slate-200 font-mono whitespace-pre-wrap overflow-x-auto max-h-[65vh]">{data.markdown}</pre>
+      </div>
+    </div>
+  )
+}

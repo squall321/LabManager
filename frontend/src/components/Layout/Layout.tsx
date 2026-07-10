@@ -6,6 +6,7 @@ import {
   Settings, LogOut, FlaskConical, Lightbulb, Target,
   KanbanSquare, Share2, CalendarDays, Library, LifeBuoy, BarChart3, Sprout,
   Menu, X, ClipboardCheck, Network, Activity, ScrollText, MessagesSquare, Award, GitBranch,
+  Compass,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
@@ -34,9 +35,14 @@ const workcraftNav = [
   { to: '/workcraft/support',        label: '지원 요청',     icon: LifeBuoy },
 ]
 
+const wbNav = [
+  { to: '/wb',          label: '프로젝트',     icon: Compass },
+]
+
 const modules = [
-  { key: 'birkman',   home: '/',                    short: 'CS' },
-  { key: 'workcraft', home: '/workcraft/frictions', short: 'WS' },
+  { key: 'birkman',   home: '/',                    short: 'CS', label: '협업 스타일' },
+  { key: 'workcraft', home: '/workcraft/frictions', short: 'WS', label: 'WorkCraft' },
+  { key: 'wb',        home: '/wb',                  short: 'WB', label: 'Working Backwards' },
 ]
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -51,8 +57,9 @@ export function Layout() {
   const location = useLocation()
   const [open, setOpen] = useState(false)
 
-  const activeModule = location.pathname.startsWith('/workcraft') ? 'workcraft' : 'birkman'
-  const nav = activeModule === 'workcraft' ? workcraftNav : birkmanNav
+  const activeModule = location.pathname.startsWith('/workcraft') ? 'workcraft'
+    : location.pathname.startsWith('/wb') ? 'wb' : 'birkman'
+  const nav = activeModule === 'workcraft' ? workcraftNav : activeModule === 'wb' ? wbNav : birkmanNav
 
   // 라우트 변경 시 모바일 드로어 닫기
   useEffect(() => { setOpen(false) }, [location.pathname])
@@ -104,21 +111,18 @@ export function Layout() {
 
         {/* Module switcher */}
         <div className="px-3 pt-3">
-          <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 rounded-xl">
+          <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-xl">
             {modules.map((m) => (
               <button
                 key={m.key}
+                title={m.label}
                 onClick={() => { navigate(m.home); close() }}
                 className={cn(
-                  'flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-all',
-                  activeModule === m.key ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                  'flex items-center justify-center py-1.5 rounded-lg text-xs font-bold transition-all',
+                  activeModule === m.key ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'
                 )}
               >
-                <span className={cn(
-                  'w-4 h-4 rounded flex items-center justify-center text-[8px] font-bold',
-                  activeModule === m.key ? 'bg-brand-100 text-brand-700' : 'bg-slate-200 text-slate-500'
-                )}>{m.short}</span>
-                {m.key === 'birkman' ? '협업 스타일' : 'WorkCraft'}
+                {m.short}
               </button>
             ))}
           </div>
@@ -127,7 +131,9 @@ export function Layout() {
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           <div className="pb-1 px-3">
             <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-              {activeModule === 'workcraft' ? 'WorkCraft Studio' : '협업 스타일 워크샵'}
+              {activeModule === 'workcraft' ? 'WorkCraft Studio'
+                : activeModule === 'wb' ? 'Working Backwards'
+                : '협업 스타일 워크샵'}
             </div>
           </div>
           {nav.map((item) => (

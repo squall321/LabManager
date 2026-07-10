@@ -135,6 +135,114 @@ export interface TeamAggregate {
   item_means?: { id: number; text: string; mean: number }[]
 }
 
+// ── Working Backwards ──
+export interface WBProject {
+  id: number
+  user_id: number
+  name: string
+  domain: string
+  one_liner: string
+  current_problem: string
+  target_user: string
+  expected_benefit: string
+  current_alternative: string
+  success_criteria: string
+  not_doing: string
+  status: string
+  visibility: Visibility
+  origin_mission_id: number | null
+  created_at: string
+  updated_at: string
+}
+
+export interface WBScenario {
+  id?: number
+  time_block: string
+  activity: string
+  pain_point: string
+  opportunity: string
+  order: number
+}
+
+export interface WBPersona {
+  id: number
+  project_id: number
+  name: string
+  role: string
+  source_user_id: number | null
+  style_code: string
+  goals: string
+  pains: string
+  fears: string
+  comm_style: string
+  success_criteria: string
+  today_statement: string
+  scenarios: WBScenario[]
+}
+
+export interface PersonaCandidate {
+  user_id: number
+  name: string
+  department: string | null
+  style_code: string
+  style_name: string
+  keyword: string
+}
+
+export interface WBPain {
+  id: number
+  title: string
+  description: string
+  source: string
+  source_ref: string
+}
+
+export interface QA { q: string; a: string }
+
+export interface WBPRFAQ {
+  id?: number
+  project_id?: number
+  headline: string
+  subtitle: string
+  summary: string
+  customer_problem: string
+  opportunity: string
+  solution: string
+  leader_quote: string
+  customer_experience: string
+  testimonial: string
+  cta: string
+  faq: QA[]
+  risks: QA[]
+}
+
+export interface WBFeature {
+  id: number
+  name: string
+  description: string
+  priority: number
+  reason: string
+  related_pain_id: number | null
+}
+
+export interface WBValidation {
+  id?: number
+  project_id?: number
+  scores: Record<string, number>
+  total: number
+  verdict: string
+  note: string
+}
+
+export interface WBMeta {
+  domains: { key: string; name: string; desc: string }[]
+  role_presets: { role: string; goals: string; pains: string; fears: string }[]
+  validation_items: { key: string; label: string; question: string; auto: boolean }[]
+  validation_max: number
+  time_blocks: string[]
+  style_persona: Record<string, { label: string; goals: string; fears: string; comm_style: string; objection: string }>
+}
+
 // ── Weekly Pulse ──
 export interface PulseQuestion { key: string; short: string; text: string }
 export interface PulseCurrent {
