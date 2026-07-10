@@ -6,9 +6,9 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import {
-  Compass, Loader2, ArrowLeft, Lightbulb, Users2, Map, AlertTriangle,
+  Compass, Loader2, ArrowLeft, ArrowRight, Lightbulb, Users2, Map, AlertTriangle,
   MessageSquare as MessageSquareQuote, ListChecks, Gauge, FileDown, Plus, Trash2, Wand2, Copy, Check,
-  Download, Sparkles, UserPlus,
+  Download, Sparkles, UserPlus, CheckCircle2, RotateCcw,
 } from 'lucide-react'
 import * as api from '../../services/api'
 import { getWBMeta } from '../../services/api'
@@ -119,7 +119,24 @@ export default function WBWorkspacePage() {
           {step === 'prfaq' && <PRFAQStep pid={pid} />}
           {step === 'feature' && <FeatureStep pid={pid} />}
           {step === 'validation' && <ValidationStep pid={pid} meta={meta} />}
-          {step === 'report' && <ReportStep pid={pid} name={project.name} />}
+          {step === 'report' && <ReportStep pid={pid} name={project.name} status={project.status} />}
+
+          {/* 단계 이동 푸터 */}
+          {(() => {
+            const idx = STEPS.findIndex((s) => s.key === step)
+            const prev = idx > 0 ? STEPS[idx - 1] : null
+            const next = idx < STEPS.length - 1 ? STEPS[idx + 1] : null
+            return (
+              <div className="flex items-center justify-between mt-5 pt-4 border-t border-slate-100">
+                {prev ? (
+                  <button onClick={() => setStep(prev.key)} className="btn-ghost text-sm"><ArrowLeft className="w-4 h-4" /> {prev.label}</button>
+                ) : <span />}
+                {next && (
+                  <button onClick={() => setStep(next.key)} className="btn-primary text-sm">다음: {next.label} <ArrowRight className="w-4 h-4" /></button>
+                )}
+              </div>
+            )
+          })()}
         </div>
       </div>
     </div>
@@ -171,8 +188,9 @@ function IdeaStep({ project, meta }: { project: WBProject; meta: WBMeta }) {
         {field('success_criteria', '성공 기준')}
         {field('not_doing', '하지 않을 것')}
       </div>
-      <div className="flex justify-end">
-        <button onClick={() => saveMut.mutate()} disabled={saveMut.isPending} className="btn-primary">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-slate-400">이름과 현재 문제만 채워도 AI로 나머지를 확장할 수 있어요.</p>
+        <button onClick={() => saveMut.mutate()} disabled={!form.name.trim() || saveMut.isPending} className="btn-primary">
           {saveMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : '저장'}
         </button>
       </div>
@@ -610,9 +628,18 @@ function ValidationStep({ pid, meta }: { pid: number; meta: WBMeta }) {
 }
 
 // ── Step 8: Report ──
-function ReportStep({ pid, name }: { pid: number; name: string }) {
+function ReportStep({ pid, name, status }: { pid: number; name: string; status: string }) {
   const [copied, setCopied] = useState('')
+  const queryClient = useQueryClient()
   const { data, isLoading } = useQuery<{ markdown: string; llm_prompt: string }>({ queryKey: ['wb-export', pid], queryFn: () => api.exportWB(pid) })
+  const statusMut = useMutation({
+    mutationFn: (s: string) => api.updateWBProject(pid, { status: s }),
+    onSuccess: (_d, s) => {
+      queryClient.invalidateQueries({ queryKey: ['wb-project', pid] })
+      queryClient.invalidateQueries({ queryKey: ['wb-projects'] })
+      toast.success(s === 'validated' ? '검증 완료로 표시했어요 ✅' : '초안으로 되돌렸어요')
+    },
+  })
   if (isLoading || !data) return <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 text-brand-500 animate-spin" /></div>
   const copy = (text: string, which: string) => { navigator.clipboard.writeText(text); setCopied(which); setTimeout(() => setCopied(''), 1600) }
   const download = () => {
@@ -621,6 +648,17 @@ function ReportStep({ pid, name }: { pid: number; name: string }) {
   }
   return (
     <div className="space-y-4">
+      {/* 검증 완료 표시 */}
+      <div className={cn('card flex items-center justify-between !py-3.5', status === 'validated' ? 'border-green-200 bg-green-50/50' : '')}>
+        <div className="flex items-center gap-2 text-sm">
+          {status === 'validated'
+            ? <><CheckCircle2 className="w-5 h-5 text-green-500" /> <span className="font-semibold text-green-700">검증 완료</span> <span className="text-slate-400">— 착수 판단이 끝난 과제</span></>
+            : <><Compass className="w-5 h-5 text-slate-400" /> <span className="text-slate-600">아직 초안 상태예요. 검토가 끝나면 완료로 표시하세요.</span></>}
+        </div>
+        {status === 'validated'
+          ? <button onClick={() => statusMut.mutate('draft')} disabled={statusMut.isPending} className="btn-ghost text-sm"><RotateCcw className="w-4 h-4" /> 초안으로</button>
+          : <button onClick={() => statusMut.mutate('validated')} disabled={statusMut.isPending} className="btn-primary text-sm"><CheckCircle2 className="w-4 h-4" /> 검증 완료로 표시</button>}
+      </div>
       <div className="flex items-center justify-end gap-2">
         <button onClick={() => copy(data.llm_prompt, 'llm')} className="btn-secondary text-sm">{copied === 'llm' ? <><Check className="w-4 h-4" /> 복사됨</> : <><Wand2 className="w-4 h-4" /> Claude 다듬기 프롬프트 복사</>}</button>
         <button onClick={() => copy(data.markdown, 'md')} className="btn-secondary text-sm">{copied === 'md' ? <><Check className="w-4 h-4" /> 복사됨</> : <><Copy className="w-4 h-4" /> Markdown 복사</>}</button>
