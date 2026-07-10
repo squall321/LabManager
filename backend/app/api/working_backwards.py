@@ -19,7 +19,7 @@ from ..schemas.working_backwards import (
     WBFeatureCreate, WBFeatureUpdate, WBFeatureResponse,
     WBValidationIn, WBValidationResponse, PersonaCandidate,
 )
-from ..services import wb_data, wb_persona, wb_templates, wb_export
+from ..services import wb_data, wb_persona, wb_templates, wb_export, wb_prompts, wb_apply
 from ..services.pulse_data import recent_weeks
 from .deps import get_current_user
 
@@ -390,6 +390,103 @@ def gen_prfaq(pid: int, current_user: User = Depends(get_current_user), db: Sess
     db.commit()
     db.refresh(pf)
     return pf
+
+
+# ─────────────── LLM 브릿지: 단계별 프롬프트 생성 / JSON 붙여넣기 반영 ───────────────
+class ApplyBody(BaseModel):
+    content: str   # LLM이 돌려준 JSON (붙여넣기)
+
+
+def _scenarios_text(db: Session, pid: int) -> str:
+    lines = []
+    personas = db.query(WBPersona).filter(WBPersona.project_id == pid).all()
+    for p in personas:
+        for s in db.query(WBScenario).filter(WBScenario.persona_id == p.id).order_by(WBScenario.order).all():
+            if s.activity or s.pain_point:
+                lines.append(f"[{p.name}/{s.time_block}] {s.activity} — 문제: {s.pain_point}")
+    return "\n".join(lines)
+
+
+@router.get("/projects/{pid}/prompt/{step}")
+def get_prompt(pid: int, step: str, persona_id: int = 0,
+               current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """단계별 LLM 프롬프트(JSON 계약 포함) 반환. Claude/ChatGPT/Gemini에 붙여넣기용."""
+    p = _get_project(pid, current_user, db)
+    personas = db.query(WBPersona).filter(WBPersona.project_id == pid).all()
+    pains = db.query(WBPainCluster).filter(WBPainCluster.project_id == pid).all()
+
+    if step == "personas":
+        prompt = wb_prompts.personas_prompt(p)
+    elif step == "ditl":
+        persona = db.query(WBPersona).filter(WBPersona.id == persona_id, WBPersona.project_id == pid).first()
+        if not persona:
+            raise HTTPException(status_code=400, detail="persona_id가 필요합니다")
+        prompt = wb_prompts.ditl_prompt(p, persona)
+    elif step == "pains":
+        prompt = wb_prompts.pains_prompt(p, personas, _scenarios_text(db, pid))
+    elif step == "prfaq":
+        prompt = wb_prompts.prfaq_prompt(p, personas, pains)
+    elif step == "features":
+        prompt = wb_prompts.features_prompt(p, pains)
+    else:
+        raise HTTPException(status_code=404, detail="지원하지 않는 단계입니다")
+    return {"step": step, "prompt": prompt}
+
+
+@router.post("/projects/{pid}/apply/{step}")
+def apply_step(pid: int, step: str, body: ApplyBody, persona_id: int = 0,
+               current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """붙여넣은 LLM JSON을 파싱해 해당 단계 데이터로 반영."""
+    _get_project(pid, current_user, db)
+    try:
+        data = wb_apply.parse_json_lenient(body.content)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    if step == "personas":
+        items = wb_apply.extract_personas(data)
+        for it in items:
+            db.add(WBPersona(project_id=pid, **it))
+        db.commit()
+        return {"applied": len(items), "kind": "added"}
+
+    if step == "ditl":
+        persona = db.query(WBPersona).filter(WBPersona.id == persona_id, WBPersona.project_id == pid).first()
+        if not persona:
+            raise HTTPException(status_code=400, detail="persona_id가 필요합니다")
+        rows = wb_apply.extract_scenarios(data)
+        db.query(WBScenario).filter(WBScenario.persona_id == persona.id).delete()
+        for r in rows:
+            db.add(WBScenario(persona_id=persona.id, **r))
+        db.commit()
+        return {"applied": len(rows), "kind": "replaced"}
+
+    if step == "pains":
+        items = wb_apply.extract_pains(data)
+        for it in items:
+            db.add(WBPainCluster(project_id=pid, source="llm", **it))
+        db.commit()
+        return {"applied": len(items), "kind": "added"}
+
+    if step == "features":
+        items = wb_apply.extract_features(data)
+        for it in items:
+            db.add(WBFeature(project_id=pid, **it))
+        db.commit()
+        return {"applied": len(items), "kind": "added"}
+
+    if step == "prfaq":
+        fields = wb_apply.extract_prfaq(data)
+        pf = db.query(WBPRFAQ).filter(WBPRFAQ.project_id == pid).first()
+        if pf:
+            for k, v in fields.items():
+                setattr(pf, k, v)
+        else:
+            db.add(WBPRFAQ(project_id=pid, **fields))
+        db.commit()
+        return {"applied": 1, "kind": "prfaq"}
+
+    raise HTTPException(status_code=404, detail="지원하지 않는 단계입니다")
 
 
 # ─────────────── Export (Markdown + LLM 프롬프트) ───────────────

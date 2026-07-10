@@ -171,6 +171,10 @@ export const getValidation = (pid: number) => api.get(`/wb/projects/${pid}/valid
 export const saveValidation = (pid: number, data: any) => api.put(`/wb/projects/${pid}/validation`, data).then((r) => r.data)
 export const getValidationHints = (pid: number) => api.get(`/wb/projects/${pid}/validation/hints`).then((r) => r.data)
 export const exportWB = (pid: number) => api.get(`/wb/projects/${pid}/export`).then((r) => r.data)
+export const getWBPrompt = (pid: number, step: string, personaId?: number) =>
+  api.get(`/wb/projects/${pid}/prompt/${step}`, { params: personaId ? { persona_id: personaId } : {} }).then((r) => r.data)
+export const applyWBStep = (pid: number, step: string, content: string, personaId?: number) =>
+  api.post(`/wb/projects/${pid}/apply/${step}`, { content }, { params: personaId ? { persona_id: personaId } : {} }).then((r) => r.data)
 
 // Weekly Pulse
 export const getPulseCurrent = () => api.get('/pulse/current').then((r) => r.data)

@@ -10,6 +10,7 @@ import {
 import * as api from '../../services/api'
 import { getWBMeta } from '../../services/api'
 import { toast } from '../../store/toastStore'
+import { LLMBridge } from '../../components/wb/LLMBridge'
 import { BIRKMAN_COLORS } from '../../lib/utils'
 import type { WBProject, WBMeta, WBPersona, PersonaCandidate, WBPain, WBPRFAQ, WBFeature, WBValidation } from '../../types'
 import { cn } from '../../lib/utils'
@@ -140,7 +141,7 @@ function IdeaStep({ project, meta }: { project: WBProject; meta: WBMeta }) {
 // ── Step 2: Persona ──
 function PersonaStep({ pid }: { pid: number }) {
   const queryClient = useQueryClient()
-  const [showAdd, setShowAdd] = useState(false)
+  const [bridge, setBridge] = useState(false)
   const { data: personas } = useQuery<WBPersona[]>({ queryKey: ['wb-personas', pid], queryFn: () => api.listPersonas(pid) })
   const { data: candidates } = useQuery<PersonaCandidate[]>({ queryKey: ['wb-candidates'], queryFn: api.getPersonaCandidates })
   const inval = () => queryClient.invalidateQueries({ queryKey: ['wb-personas', pid] })
@@ -185,17 +186,19 @@ function PersonaStep({ pid }: { pid: number }) {
         )}
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="font-semibold text-slate-700">페르소나 {personas?.length ? `(${personas.length})` : ''}</h3>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <button onClick={() => setBridge(true)} className="btn-secondary text-sm"><Wand2 className="w-4 h-4" /> AI로 페르소나 만들기</button>
           {personas && personas.length > 0 && (
             <button onClick={() => genToday.mutate()} disabled={genToday.isPending} className="btn-secondary text-sm">
-              {genToday.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Wand2 className="w-4 h-4" /> Today's Statement 생성</>}
+              {genToday.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Today's Statement 생성</>}
             </button>
           )}
           <button onClick={() => addBlank.mutate()} className="btn-secondary text-sm"><Plus className="w-4 h-4" /> 빈 페르소나</button>
         </div>
       </div>
+      {bridge && <LLMBridge pid={pid} step="personas" title="페르소나 5종 만들기" onClose={() => setBridge(false)} onApplied={inval} />}
 
       {!personas || personas.length === 0 ? (
         <div className="card text-center py-10 text-sm text-slate-400">위에서 동료를 선택하거나 빈 페르소나를 추가하세요.</div>
@@ -238,6 +241,7 @@ function DITLStep({ pid, meta }: { pid: number; meta: WBMeta }) {
 
 function DITLCard({ pid, persona, timeBlocks }: { pid: number; persona: WBPersona; timeBlocks: string[] }) {
   const queryClient = useQueryClient()
+  const [bridge, setBridge] = useState(false)
   const [rows, setRows] = useState(persona.scenarios.length ? persona.scenarios.map((s) => ({ ...s })) : timeBlocks.map((t, i) => ({ time_block: t, activity: '', pain_point: '', opportunity: '', order: i })))
   const save = useMutation({
     mutationFn: () => api.setScenarios(pid, persona.id, rows),
@@ -247,10 +251,15 @@ function DITLCard({ pid, persona, timeBlocks }: { pid: number; persona: WBPerson
   const setRow = (i: number, k: string, v: string) => setRows((rs) => rs.map((r, j) => j === i ? { ...r, [k]: v } : r))
   return (
     <div className="card">
-      <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
-        {persona.style_code && <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: BIRKMAN_COLORS[persona.style_code]?.hex }} />}
-        {persona.name}의 하루
-      </h3>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+          {persona.style_code && <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: BIRKMAN_COLORS[persona.style_code]?.hex }} />}
+          {persona.name}의 하루
+        </h3>
+        <button onClick={() => setBridge(true)} className="btn-secondary !py-1.5 text-xs"><Wand2 className="w-3.5 h-3.5" /> AI로 채우기</button>
+      </div>
+      {bridge && <LLMBridge pid={pid} step="ditl" personaId={persona.id} title={`${persona.name}의 하루 시나리오`}
+        onClose={() => setBridge(false)} onApplied={() => queryClient.invalidateQueries({ queryKey: ['wb-personas', pid] })} />}
       <div className="space-y-2">
         {rows.map((r, i) => (
           <div key={i} className="grid grid-cols-[70px_1fr_1fr] gap-2 items-center">
@@ -269,6 +278,7 @@ function DITLCard({ pid, persona, timeBlocks }: { pid: number; persona: WBPerson
 function PainStep({ pid }: { pid: number }) {
   const queryClient = useQueryClient()
   const [title, setTitle] = useState('')
+  const [bridge, setBridge] = useState(false)
   const { data: pains } = useQuery<WBPain[]>({ queryKey: ['wb-pains', pid], queryFn: () => api.listPains(pid) })
   const inval = () => queryClient.invalidateQueries({ queryKey: ['wb-pains', pid] })
   const add = useMutation({ mutationFn: () => api.addPain(pid, { title, description: '' }), onSuccess: () => { setTitle(''); inval() } })
@@ -278,15 +288,19 @@ function PainStep({ pid }: { pid: number }) {
     onSuccess: (r) => { inval(); toast.success(`${r.imported}건 가져왔어요`) },
     onError: () => toast.error('가져오기 실패'),
   })
-  const badge = (s: string) => s === 'friction' ? 'WorkCraft 불편함' : s === 'reflection' ? '협업 회고' : '직접'
+  const badge = (s: string) => s === 'friction' ? 'WorkCraft 불편함' : s === 'reflection' ? '협업 회고' : s === 'llm' ? 'AI' : '직접'
   return (
     <div className="space-y-4">
+      {bridge && <LLMBridge pid={pid} step="pains" title="공통 문제(Pain) 묶기" onClose={() => setBridge(false)} onApplied={inval} />}
       <div className="card">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <h2 className="section-title">Pain Cluster</h2>
-          <button onClick={() => imp.mutate()} disabled={imp.isPending} className="btn-secondary text-sm">
-            {imp.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Sparkles className="w-4 h-4" /> WorkCraft에서 가져오기</>}
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => setBridge(true)} className="btn-secondary text-sm"><Wand2 className="w-4 h-4" /> AI로 추출</button>
+            <button onClick={() => imp.mutate()} disabled={imp.isPending} className="btn-secondary text-sm">
+              {imp.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Sparkles className="w-4 h-4" /> WorkCraft에서 가져오기</>}
+            </button>
+          </div>
         </div>
         <p className="text-sm text-slate-400 mb-3">공유 불편함·협업 회고(익명)에서 실제 반복 문제를 시드할 수 있어요.</p>
         <div className="flex gap-2">
@@ -318,26 +332,35 @@ function PainStep({ pid }: { pid: number }) {
 // ── Step 5: PR/FAQ ──
 function PRFAQStep({ pid }: { pid: number }) {
   const queryClient = useQueryClient()
+  const [bridge, setBridge] = useState(false)
+  const inval = () => queryClient.invalidateQueries({ queryKey: ['wb-prfaq', pid] })
   const { data, isLoading } = useQuery<WBPRFAQ>({ queryKey: ['wb-prfaq', pid], queryFn: () => api.getPRFAQ(pid), retry: false })
   const gen = useMutation({
     mutationFn: () => api.genPRFAQ(pid),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['wb-prfaq', pid] }); toast.success('PR/FAQ 초안을 생성했어요') },
+    onSuccess: () => { inval(); toast.success('PR/FAQ 초안을 생성했어요') },
     onError: () => toast.error('생성 실패'),
   })
+  const bridgeEl = bridge && <LLMBridge pid={pid} step="prfaq" title="PR/FAQ 작성" onClose={() => setBridge(false)} onApplied={inval} />
   if (isLoading) return <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 text-brand-500 animate-spin" /></div>
   if (!data) return (
-    <div className="card text-center py-12">
-      <MessageSquareQuote className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-      <p className="text-slate-500 mb-4">아이디어·페르소나·Pain을 바탕으로 PR/FAQ 초안을 만들어보세요.<br />페르소나 스타일 기반 반론이 자동 포함됩니다.</p>
-      <button onClick={() => gen.mutate()} disabled={gen.isPending} className="btn-primary">
-        {gen.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Wand2 className="w-4 h-4" /> PR/FAQ 초안 생성</>}
-      </button>
-    </div>
+    <>
+      {bridgeEl}
+      <div className="card text-center py-12">
+        <MessageSquareQuote className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+        <p className="text-slate-500 mb-4">템플릿으로 초안을 만들거나, AI로 더 풍부하게 작성해보세요.<br />페르소나 스타일 기반 반론이 자동 포함됩니다.</p>
+        <div className="flex items-center justify-center gap-2">
+          <button onClick={() => gen.mutate()} disabled={gen.isPending} className="btn-secondary">
+            {gen.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : '템플릿 초안'}
+          </button>
+          <button onClick={() => setBridge(true)} className="btn-primary"><Wand2 className="w-4 h-4" /> AI로 작성</button>
+        </div>
+      </div>
+    </>
   )
-  return <PRFAQEditor pid={pid} data={data} onRegen={() => gen.mutate()} regenerating={gen.isPending} />
+  return <>{bridgeEl}<PRFAQEditor pid={pid} data={data} onRegen={() => gen.mutate()} regenerating={gen.isPending} onAI={() => setBridge(true)} /></>
 }
 
-function PRFAQEditor({ pid, data, onRegen, regenerating }: { pid: number; data: WBPRFAQ; onRegen: () => void; regenerating: boolean }) {
+function PRFAQEditor({ pid, data, onRegen, regenerating, onAI }: { pid: number; data: WBPRFAQ; onRegen: () => void; regenerating: boolean; onAI: () => void }) {
   const queryClient = useQueryClient()
   const [f, setF] = useState<WBPRFAQ>({ ...data, faq: data.faq ?? [], risks: data.risks ?? [] })
   const save = useMutation({
@@ -353,9 +376,12 @@ function PRFAQEditor({ pid, data, onRegen, regenerating }: { pid: number; data: 
   )
   return (
     <div className="card space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="section-title">PR/FAQ</h2>
-        <button onClick={onRegen} disabled={regenerating} className="btn-secondary text-sm">{regenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Wand2 className="w-4 h-4" /> 다시 생성</>}</button>
+        <div className="flex gap-2">
+          <button onClick={onAI} className="btn-secondary text-sm"><Wand2 className="w-4 h-4" /> AI로 작성</button>
+          <button onClick={onRegen} disabled={regenerating} className="btn-secondary text-sm">{regenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : '템플릿 다시'}</button>
+        </div>
       </div>
       <div><label className="label">헤드라인</label><input className="input-field mt-1" value={f.headline} onChange={(e) => set('headline', e.target.value)} /></div>
       <div><label className="label">부제목</label><input className="input-field mt-1" value={f.subtitle} onChange={(e) => set('subtitle', e.target.value)} /></div>
@@ -395,14 +421,19 @@ function PRFAQEditor({ pid, data, onRegen, regenerating }: { pid: number; data: 
 function FeatureStep({ pid }: { pid: number }) {
   const queryClient = useQueryClient()
   const [form, setForm] = useState({ name: '', priority: 3, reason: '' })
+  const [bridge, setBridge] = useState(false)
   const { data: features } = useQuery<WBFeature[]>({ queryKey: ['wb-features', pid], queryFn: () => api.listFeatures(pid) })
   const inval = () => queryClient.invalidateQueries({ queryKey: ['wb-features', pid] })
   const add = useMutation({ mutationFn: () => api.addFeature(pid, form), onSuccess: () => { setForm({ name: '', priority: 3, reason: '' }); inval() } })
   const del = useMutation({ mutationFn: (id: number) => api.deleteFeature(pid, id), onSuccess: inval })
   return (
     <div className="space-y-4">
+      {bridge && <LLMBridge pid={pid} step="features" title="기능 도출·우선순위" onClose={() => setBridge(false)} onApplied={inval} />}
       <div className="card">
-        <h2 className="section-title mb-3">기능 백로그</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="section-title">기능 백로그</h2>
+          <button onClick={() => setBridge(true)} className="btn-secondary text-sm"><Wand2 className="w-4 h-4" /> AI로 도출</button>
+        </div>
         <div className="grid md:grid-cols-[1fr_80px] gap-2">
           <input className="input-field" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="기능명 (예: 케이스 자동 생성)" />
           <select className="input-field" value={form.priority} onChange={(e) => setForm((p) => ({ ...p, priority: Number(e.target.value) }))}>

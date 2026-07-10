@@ -103,3 +103,48 @@ def test_generators_validation_and_export(client, login):
     assert "# AP Thermal Automation" in exp["markdown"]
     assert "PR/FAQ" in exp["markdown"]
     assert "Working Backwards" in exp["llm_prompt"] and exp["markdown"] in exp["llm_prompt"]
+
+
+def test_llm_bridge_prompt_and_apply(client, login):
+    owner = login("seoyeon.lee@company.com")
+    pid = client.post("/api/wb/projects", headers=owner, json={
+        "name": "Drop 자동화", "one_liner": "낙하 해석 자동화", "current_problem": "케이스 수작업"}).json()["id"]
+
+    # 1) 프롬프트 생성 (JSON 계약 포함)
+    pr = client.get(f"/api/wb/projects/{pid}/prompt/personas", headers=owner).json()
+    assert "JSON" in pr["prompt"] and "personas" in pr["prompt"]
+
+    # 2) LLM이 돌려준 것처럼 JSON 붙여넣기 (코드펜스/잡텍스트 섞여도 파싱)
+    pasted = '설명 어쩌구...\n```json\n{"personas":[{"name":"해석 실무자","role":"엔지니어","goals":"반복 감소"},{"name":"임원","role":"의사결정","goals":"ROI"}]}\n```'
+    res = client.post(f"/api/wb/projects/{pid}/apply/personas", headers=owner, json={"content": pasted}).json()
+    assert res["applied"] == 2
+    personas = client.get(f"/api/wb/projects/{pid}/personas", headers=owner).json()
+    assert {p["name"] for p in personas} == {"해석 실무자", "임원"}
+
+    # DITL 적용 (persona_id 지정, 교체)
+    pers_id = personas[0]["id"]
+    ditl = '{"scenarios":[{"time_block":"오전","activity":"모델 복사","pain_point":"조건 재확인"}]}'
+    r = client.post(f"/api/wb/projects/{pid}/apply/ditl?persona_id={pers_id}", headers=owner, json={"content": ditl}).json()
+    assert r["applied"] == 1
+
+    # Pains 적용
+    client.post(f"/api/wb/projects/{pid}/apply/pains", headers=owner,
+                json={"content": '{"pains":[{"title":"반복 세팅","description":"매번 수작업"}]}'})
+    pains = client.get(f"/api/wb/projects/{pid}/pains", headers=owner).json()
+    assert any(p["source"] == "llm" and p["title"] == "반복 세팅" for p in pains)
+
+    # Features 적용
+    client.post(f"/api/wb/projects/{pid}/apply/features", headers=owner,
+                json={"content": '{"features":[{"name":"케이스 자동 생성","priority":1,"reason":"핵심"}]}'})
+    feats = client.get(f"/api/wb/projects/{pid}/features", headers=owner).json()
+    assert feats and feats[0]["name"] == "케이스 자동 생성"
+
+    # PR/FAQ 적용 (객체 자체)
+    prfaq_json = '{"headline":"H","customer_problem":"CP","risks":[{"q":"왜?","a":"근거"}]}'
+    client.post(f"/api/wb/projects/{pid}/apply/prfaq", headers=owner, json={"content": prfaq_json})
+    pf = client.get(f"/api/wb/projects/{pid}/prfaq", headers=owner).json()
+    assert pf["headline"] == "H" and pf["risks"][0]["q"] == "왜?"
+
+    # 잘못된 입력 → 400
+    bad = client.post(f"/api/wb/projects/{pid}/apply/personas", headers=owner, json={"content": "그냥 텍스트"})
+    assert bad.status_code == 400
