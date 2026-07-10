@@ -5,7 +5,8 @@
       "Bash(rm -f data/_gen.db)",
       "Bash(DATABASE_URL=\"sqlite:///./data/_gen.db\" PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -m alembic revision --autogenerate -m \"add working backwards\")",
       "Bash(rm -f data/test_ci.db)",
-      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -m pytest -q tests/test_working_backwards.py)"
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -m pytest -q tests/test_working_backwards.py)",
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -c ' *)"
     ]
   }
 }

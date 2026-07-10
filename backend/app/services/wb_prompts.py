@@ -18,18 +18,14 @@ _COMMON_RULES = (
 
 def _project_context(project, personas=None, pains=None) -> str:
     domain = next((d["name"] for d in wb_data.DOMAINS if d["key"] == project.domain), project.domain)
-    ctx = [
-        "## 맥락 (아이디어)",
-        f"- 이름: {project.name}",
-        f"- 업무 유형: {domain}",
-        f"- 한 줄 설명: {project.one_liner}",
-        f"- 현재 문제: {project.current_problem}",
-        f"- 대상 사용자: {project.target_user}",
-        f"- 기대 효과: {project.expected_benefit}",
-        f"- 기존 대체 수단: {project.current_alternative}",
-        f"- 성공 기준: {project.success_criteria}",
-        f"- 하지 않을 것: {project.not_doing}",
+    # 값이 있는 필드만 넣어 프롬프트 품질을 높인다 (빈 라인 제거)
+    fields = [
+        ("이름", project.name), ("업무 유형", domain), ("한 줄 설명", project.one_liner),
+        ("현재 문제", project.current_problem), ("대상 사용자", project.target_user),
+        ("기대 효과", project.expected_benefit), ("기존 대체 수단", project.current_alternative),
+        ("성공 기준", project.success_criteria), ("하지 않을 것", project.not_doing),
     ]
+    ctx = ["## 맥락 (아이디어)"] + [f"- {k}: {v}" for k, v in fields if (v or "").strip()]
     if personas:
         ctx.append("\n## 이해관계자(페르소나)")
         for p in personas:

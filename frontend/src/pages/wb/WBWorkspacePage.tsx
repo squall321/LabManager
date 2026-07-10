@@ -1,5 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import {
+  ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, Radar,
+} from 'recharts'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import {
@@ -34,6 +37,24 @@ export default function WBWorkspacePage() {
 
   const { data: project, isLoading } = useQuery<WBProject>({ queryKey: ['wb-project', pid], queryFn: () => api.getWBProject(pid), retry: false })
   const { data: meta } = useQuery<WBMeta>({ queryKey: ['wb-meta'], queryFn: getWBMeta })
+  // 단계 완료 상태(가이드) — 하위 스텝과 같은 queryKey라 캐시 공유
+  const { data: personas } = useQuery<WBPersona[]>({ queryKey: ['wb-personas', pid], queryFn: () => api.listPersonas(pid) })
+  const { data: pains } = useQuery<WBPain[]>({ queryKey: ['wb-pains', pid], queryFn: () => api.listPains(pid) })
+  const { data: features } = useQuery<WBFeature[]>({ queryKey: ['wb-features', pid], queryFn: () => api.listFeatures(pid) })
+  const { data: prfaq } = useQuery<WBPRFAQ | null>({ queryKey: ['wb-prfaq', pid], queryFn: () => api.getPRFAQ(pid).catch(() => null), retry: false })
+  const { data: validation } = useQuery<WBValidation | null>({ queryKey: ['wb-validation', pid], queryFn: () => api.getValidation(pid).catch(() => null), retry: false })
+
+  const done: Record<string, boolean> = {
+    idea: !!(project?.current_problem || project?.one_liner),
+    persona: (personas?.length ?? 0) > 0,
+    ditl: (personas ?? []).some((p) => p.scenarios?.length > 0),
+    pain: (pains?.length ?? 0) > 0,
+    prfaq: !!prfaq?.headline,
+    feature: (features?.length ?? 0) > 0,
+    validation: (validation?.total ?? 0) > 0,
+    report: true,
+  }
+  const nextStep = STEPS.find((s) => s.key !== 'report' && !done[s.key])?.key
 
   if (isLoading) return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 text-brand-500 animate-spin" /></div>
   if (!project || !meta) return (
@@ -55,16 +76,37 @@ export default function WBWorkspacePage() {
       <div className="grid lg:grid-cols-[200px_1fr] gap-6">
         {/* Step nav */}
         <div className="lg:sticky lg:top-4 h-fit">
+          {(() => {
+            const doneCount = STEPS.filter((s) => s.key !== 'report' && done[s.key]).length
+            const totalCount = STEPS.length - 1
+            return (
+              <div className="hidden lg:block mb-3 px-1">
+                <div className="flex justify-between text-[11px] text-slate-400 mb-1">
+                  <span>진행</span><span>{doneCount} / {totalCount}</span>
+                </div>
+                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-brand-500 rounded-full transition-all" style={{ width: `${(doneCount / totalCount) * 100}%` }} />
+                </div>
+              </div>
+            )
+          })()}
           <div className="flex lg:flex-col gap-1.5 overflow-x-auto pb-2 lg:pb-0">
-            {STEPS.map((s, i) => (
-              <button key={s.key} onClick={() => setStep(s.key)}
-                className={cn('flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all',
-                  step === s.key ? 'bg-brand-50 text-brand-700 shadow-sm' : 'text-slate-500 hover:bg-slate-50')}>
-                <span className={cn('w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0',
-                  step === s.key ? 'bg-brand-500 text-white' : 'bg-slate-200 text-slate-500')}>{i + 1}</span>
-                {s.label}
-              </button>
-            ))}
+            {STEPS.map((s, i) => {
+              const isDone = done[s.key]
+              const isNext = nextStep === s.key
+              return (
+                <button key={s.key} onClick={() => setStep(s.key)}
+                  className={cn('flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all',
+                    step === s.key ? 'bg-brand-50 text-brand-700 shadow-sm' : 'text-slate-500 hover:bg-slate-50')}>
+                  <span className={cn('w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0',
+                    isDone ? 'bg-green-500 text-white' : step === s.key ? 'bg-brand-500 text-white' : 'bg-slate-200 text-slate-500')}>
+                    {isDone ? <Check className="w-3 h-3" /> : i + 1}
+                  </span>
+                  <span className="flex-1 text-left">{s.label}</span>
+                  {isNext && <span className="text-[10px] font-semibold text-brand-600 bg-brand-100 px-1.5 py-0.5 rounded-full">다음</span>}
+                </button>
+              )
+            })}
           </div>
         </div>
 
@@ -72,7 +114,7 @@ export default function WBWorkspacePage() {
         <div className="min-w-0">
           {step === 'idea' && <IdeaStep project={project} meta={meta} />}
           {step === 'persona' && <PersonaStep pid={pid} />}
-          {step === 'ditl' && <DITLStep pid={pid} meta={meta} />}
+          {step === 'ditl' && <DITLStep pid={pid} meta={meta} goStep={setStep} />}
           {step === 'pain' && <PainStep pid={pid} />}
           {step === 'prfaq' && <PRFAQStep pid={pid} />}
           {step === 'feature' && <FeatureStep pid={pid} />}
@@ -140,11 +182,18 @@ function IdeaStep({ project, meta }: { project: WBProject; meta: WBMeta }) {
 
 // ── Step 2: Persona ──
 function PersonaStep({ pid }: { pid: number }) {
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [bridge, setBridge] = useState(false)
   const { data: personas } = useQuery<WBPersona[]>({ queryKey: ['wb-personas', pid], queryFn: () => api.listPersonas(pid) })
   const { data: candidates } = useQuery<PersonaCandidate[]>({ queryKey: ['wb-candidates'], queryFn: api.getPersonaCandidates })
+  const { data: meta } = useQuery<WBMeta>({ queryKey: ['wb-meta'], queryFn: getWBMeta })
   const inval = () => queryClient.invalidateQueries({ queryKey: ['wb-personas', pid] })
+
+  const addPreset = useMutation({
+    mutationFn: (r: any) => api.addPersona(pid, { name: r.role, role: r.role, goals: r.goals, pains: r.pains, fears: r.fears }),
+    onSuccess: inval,
+  })
 
   const addFromCandidate = useMutation({
     mutationFn: (c: PersonaCandidate) => api.addPersona(pid, { name: c.name, role: '이해관계자', source_user_id: c.user_id }),
@@ -170,7 +219,11 @@ function PersonaStep({ pid }: { pid: number }) {
         <h2 className="section-title mb-1 flex items-center gap-2"><Sparkles className="w-4 h-4 text-brand-500" /> 실제 동료로 페르소나 만들기</h2>
         <p className="text-sm text-slate-400 mb-3">공개된 협업 스타일 리포트를 가진 동료. 선택하면 스타일에 맞는 관심사·반론이 자동 채워져요.</p>
         {!candidates || candidates.length === 0 ? (
-          <p className="text-sm text-slate-400">공개된 협업 스타일 리포트가 아직 없어요.</p>
+          <div className="text-sm text-slate-400">
+            공개된 협업 스타일 리포트가 아직 없어요.
+            <button onClick={() => navigate('/survey')} className="text-brand-600 hover:underline ml-1">진단을 완료하고 공개</button>
+            하면 동료를 실제 페르소나로 쓸 수 있어요.
+          </div>
         ) : (
           <div className="flex flex-wrap gap-2">
             {candidates.map((c) => (
@@ -185,6 +238,22 @@ function PersonaStep({ pid }: { pid: number }) {
           </div>
         )}
       </div>
+
+      {/* 역할 프리셋 빠른 추가 (CAE 기본 이해관계자) */}
+      {meta && (
+        <div className="card">
+          <h3 className="font-semibold text-slate-700 mb-1 text-sm">역할 프리셋으로 빠르게 추가</h3>
+          <p className="text-xs text-slate-400 mb-3">전형적인 이해관계자를 관심사·두려움과 함께 한 번에 추가해요.</p>
+          <div className="flex flex-wrap gap-2">
+            {meta.role_presets.map((r) => (
+              <button key={r.role} onClick={() => addPreset.mutate(r)} disabled={addPreset.isPending}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 hover:border-brand-300 text-sm transition-all">
+                <Plus className="w-3.5 h-3.5 text-slate-400" /> {r.role}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="font-semibold text-slate-700">페르소나 {personas?.length ? `(${personas.length})` : ''}</h3>
@@ -233,9 +302,15 @@ function PersonaCard({ pid, persona, onDelete, onChange }: { pid: number; person
 }
 
 // ── Step 3: Day in the Life ──
-function DITLStep({ pid, meta }: { pid: number; meta: WBMeta }) {
+function DITLStep({ pid, meta, goStep }: { pid: number; meta: WBMeta; goStep: (s: string) => void }) {
   const { data: personas } = useQuery<WBPersona[]>({ queryKey: ['wb-personas', pid], queryFn: () => api.listPersonas(pid) })
-  if (!personas || personas.length === 0) return <div className="card text-center py-10 text-sm text-slate-400">먼저 페르소나를 추가하세요.</div>
+  if (!personas || personas.length === 0) return (
+    <div className="card text-center py-10">
+      <Users2 className="w-9 h-9 text-slate-300 mx-auto mb-2" />
+      <p className="text-sm text-slate-500 mb-3">하루 시나리오는 페르소나별로 만들어요. 먼저 페르소나를 추가하세요.</p>
+      <button onClick={() => goStep('persona')} className="btn-secondary text-sm"><ArrowLeft className="w-4 h-4" /> 페르소나 단계로</button>
+    </div>
+  )
   return <div className="space-y-4">{personas.map((p) => <DITLCard key={p.id} pid={pid} persona={p} timeBlocks={meta.time_blocks} />)}</div>
 }
 
@@ -334,7 +409,7 @@ function PRFAQStep({ pid }: { pid: number }) {
   const queryClient = useQueryClient()
   const [bridge, setBridge] = useState(false)
   const inval = () => queryClient.invalidateQueries({ queryKey: ['wb-prfaq', pid] })
-  const { data, isLoading } = useQuery<WBPRFAQ>({ queryKey: ['wb-prfaq', pid], queryFn: () => api.getPRFAQ(pid), retry: false })
+  const { data, isLoading } = useQuery<WBPRFAQ | null>({ queryKey: ['wb-prfaq', pid], queryFn: () => api.getPRFAQ(pid).catch(() => null), retry: false })
   const gen = useMutation({
     mutationFn: () => api.genPRFAQ(pid),
     onSuccess: () => { inval(); toast.success('PR/FAQ 초안을 생성했어요') },
@@ -465,11 +540,20 @@ function FeatureStep({ pid }: { pid: number }) {
 }
 
 // ── Step 7: Validation & MVP ──
+function liveVerdict(total: number, max: number): string {
+  const r = max ? total / max : 0
+  if (r >= 0.75) return '자동화/시스템으로 만들 가치가 높아요. 단, 1차 MVP는 작게 시작하세요.'
+  if (r >= 0.5) return '가치가 있으나 범위를 좁혀 검증부터 하는 게 좋아요.'
+  if (total === 0) return '항목을 평가해 총점을 매겨보세요.'
+  return '아직 근거가 약해요. 문제 정의와 이해관계자를 더 확인하세요.'
+}
+
 function ValidationStep({ pid, meta }: { pid: number; meta: WBMeta }) {
   const queryClient = useQueryClient()
-  const { data } = useQuery<WBValidation>({ queryKey: ['wb-validation', pid], queryFn: () => api.getValidation(pid), retry: false })
+  const { data } = useQuery<WBValidation | null>({ queryKey: ['wb-validation', pid], queryFn: () => api.getValidation(pid).catch(() => null), retry: false })
   const { data: hints } = useQuery<any>({ queryKey: ['wb-hints', pid], queryFn: () => api.getValidationHints(pid) })
-  const [scores, setScores] = useState<Record<string, number>>(data?.scores || {})
+  const [scores, setScores] = useState<Record<string, number>>({})
+  useEffect(() => { if (data?.scores) setScores(data.scores) }, [data])
   const save = useMutation({
     mutationFn: () => api.saveValidation(pid, { scores, note: data?.note || '' }),
     onSuccess: (v) => { queryClient.invalidateQueries({ queryKey: ['wb-validation', pid] }); setScores(v.scores); toast.success(`총점 ${v.total}/${meta.validation_max}`) },
@@ -477,12 +561,26 @@ function ValidationStep({ pid, meta }: { pid: number; meta: WBMeta }) {
   })
   const total = Object.values(scores).reduce((a, b) => a + b, 0)
   const applyHint = (key: string) => hints?.[key] != null && setScores((s) => ({ ...s, [key]: hints[key] }))
+  const radarData = meta.validation_items.map((it) => ({ item: it.label, score: scores[it.key] || 0 }))
+  const ratio = total / meta.validation_max
   return (
     <div className="card space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="section-title">검증 점수 & MVP</h2>
-        <div className="text-right"><span className="text-2xl font-bold text-brand-600">{total}</span><span className="text-slate-400 text-sm"> / {meta.validation_max}</span></div>
+        <div className="text-right">
+          <span className={cn('text-2xl font-bold', ratio >= 0.75 ? 'text-green-600' : ratio >= 0.5 ? 'text-amber-500' : 'text-slate-600')}>{total}</span>
+          <span className="text-slate-400 text-sm"> / {meta.validation_max}</span>
+        </div>
       </div>
+      {total > 0 && (
+        <ResponsiveContainer width="100%" height={240}>
+          <RadarChart data={radarData} margin={{ top: 8, right: 30, bottom: 8, left: 30 }}>
+            <PolarGrid stroke="#e2e8f0" />
+            <PolarAngleAxis dataKey="item" tick={{ fill: '#64748b', fontSize: 11 }} />
+            <Radar dataKey="score" stroke="#6366f1" fill="#6366f1" fillOpacity={0.25} strokeWidth={2} />
+          </RadarChart>
+        </ResponsiveContainer>
+      )}
       <div className="space-y-3">
         {meta.validation_items.map((item) => (
           <div key={item.key}>
@@ -505,7 +603,7 @@ function ValidationStep({ pid, meta }: { pid: number; meta: WBMeta }) {
           </div>
         ))}
       </div>
-      {data?.verdict && <div className="rounded-xl bg-brand-50 border border-brand-100 p-3.5 text-sm text-brand-800">{data.verdict}</div>}
+      {total > 0 && <div className={cn('rounded-xl p-3.5 text-sm border', ratio >= 0.75 ? 'bg-green-50 border-green-100 text-green-800' : ratio >= 0.5 ? 'bg-amber-50 border-amber-100 text-amber-800' : 'bg-slate-50 border-slate-100 text-slate-600')}>{liveVerdict(total, meta.validation_max)}</div>}
       <div className="flex justify-end"><button onClick={() => save.mutate()} disabled={save.isPending} className="btn-primary">{save.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : '판정 저장'}</button></div>
     </div>
   )

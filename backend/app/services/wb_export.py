@@ -24,15 +24,14 @@ def _qa_block(items: List[dict]) -> str:
 def to_markdown(project, personas, pains, prfaq, features, validation) -> str:
     domain_name = next((d["name"] for d in wb_data.DOMAINS if d["key"] == project.domain), project.domain)
     md = [f"# {project.name}", ""]
-    md.append(f"> {project.one_liner}" if project.one_liner else "")
+    if project.one_liner:
+        md.append(f"> {project.one_liner}")
     md.append(f"\n**업무 유형**: {domain_name}  ")
-    md.append(f"**대상**: {project.target_user}  ")
-    md.append(f"**현재 문제**: {project.current_problem}  ")
-    md.append(f"**기대 효과**: {project.expected_benefit}  ")
-    md.append(f"**기존 대체 수단**: {project.current_alternative}  ")
-    md.append(f"**성공 기준**: {project.success_criteria}  ")
-    if project.not_doing:
-        md.append(f"**하지 않을 것**: {project.not_doing}")
+    for label, val in [("대상", project.target_user), ("현재 문제", project.current_problem),
+                       ("기대 효과", project.expected_benefit), ("기존 대체 수단", project.current_alternative),
+                       ("성공 기준", project.success_criteria), ("하지 않을 것", project.not_doing)]:
+        if (val or "").strip():
+            md.append(f"**{label}**: {val}  ")
 
     # 페르소나 + Today's Statement + DITL
     md.append("\n## 이해관계자 페르소나\n")
