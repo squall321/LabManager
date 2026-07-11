@@ -22,6 +22,53 @@ def test_wb_project_crud_and_ownership(client, login):
     assert client.get(f"/api/wb/projects/{pid}", headers=a).json()["current_problem"] == "반복 케이스 생성"
 
 
+def test_trash_soft_delete_restore_and_purge(client, login):
+    a = login("seoyeon.lee@company.com")
+    pid = client.post("/api/wb/projects", headers=a, json={"name": "지울 프로젝트"}).json()["id"]
+
+    # 삭제 = 보관함으로 이동(소프트). 기본 목록에서 사라지고 보관함에 나타남
+    r = client.delete(f"/api/wb/projects/{pid}", headers=a).json()
+    assert r["trashed"] == pid
+    assert not any(p["id"] == pid for p in client.get("/api/wb/projects", headers=a).json())
+    trashed = client.get("/api/wb/projects", headers=a, params={"trashed": True}).json()
+    assert any(p["id"] == pid for p in trashed)
+
+    # 보관함 항목은 조회·수정 불가(먼저 복구해야 함)
+    assert client.get(f"/api/wb/projects/{pid}", headers=a).status_code == 404
+    assert client.put(f"/api/wb/projects/{pid}", headers=a, json={"one_liner": "x"}).status_code == 404
+
+    # 복구 → 다시 정상
+    assert client.post(f"/api/wb/projects/{pid}/restore", headers=a).status_code == 200
+    assert client.get(f"/api/wb/projects/{pid}", headers=a).status_code == 200
+
+    # purge 는 보관함에 있을 때만 허용
+    assert client.delete(f"/api/wb/projects/{pid}", headers=a, params={"purge": True}).status_code == 400
+    client.delete(f"/api/wb/projects/{pid}", headers=a)  # 보관함으로
+    assert client.delete(f"/api/wb/projects/{pid}", headers=a, params={"purge": True}).json()["purged"] == pid
+    # 이제 완전히 사라짐
+    assert not any(p["id"] == pid for p in client.get("/api/wb/projects", headers=a, params={"trashed": True}).json())
+
+
+def test_project_search_filter_sort(client, login):
+    a = login("sua.choi@company.com")
+    p1 = client.post("/api/wb/projects", headers=a, json={"name": "낙하 자동화", "domain": "drop_impact"}).json()["id"]
+    client.post("/api/wb/projects", headers=a, json={"name": "열 해석 도구", "domain": "thermal"})
+    client.put(f"/api/wb/projects/{p1}", headers=a, json={"status": "validated"})
+
+    # 이름 검색
+    res = client.get("/api/wb/projects", headers=a, params={"q": "낙하"}).json()
+    assert len(res) == 1 and res[0]["id"] == p1
+    # 업무유형 필터
+    thermal = client.get("/api/wb/projects", headers=a, params={"domain": "thermal"}).json()
+    assert len(thermal) == 1 and thermal[0]["name"] == "열 해석 도구"
+    # 상태 필터
+    validated = client.get("/api/wb/projects", headers=a, params={"status": "validated"}).json()
+    assert len(validated) == 1 and validated[0]["id"] == p1
+    # 이름순 정렬
+    names = [p["name"] for p in client.get("/api/wb/projects", headers=a, params={"sort": "name"}).json()]
+    assert names == sorted(names)
+
+
 def test_living_persona_from_collab_style(client, login):
     owner = login("seoyeon.lee@company.com")
     mate = login("jiho.park@company.com")

@@ -42,11 +42,31 @@ def persona_candidates(current_user: User = Depends(get_current_user), db: Sessi
 
 # ─────────────── 프로젝트 CRUD ───────────────
 @router.get("/projects", response_model=List[WBProjectResponse])
-def list_projects(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    return (
-        db.query(WBProject).filter(WBProject.user_id == current_user.id)
-        .order_by(WBProject.created_at.desc()).all()
-    )
+def list_projects(
+    trashed: bool = False,
+    q: str = "",
+    domain: str = "",
+    status: str = "",
+    sort: str = "updated",   # updated | created | name
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """프로젝트 목록. 기본은 보관함(삭제) 제외.
+    trashed=true → 보관함만. q/domain/status 로 필터, sort 로 정렬."""
+    query = db.query(WBProject).filter(WBProject.user_id == current_user.id)
+    query = query.filter(WBProject.deleted_at.isnot(None) if trashed else WBProject.deleted_at.is_(None))
+    if q.strip():
+        like = f"%{q.strip()}%"
+        query = query.filter((WBProject.name.ilike(like)) | (WBProject.one_liner.ilike(like)))
+    if domain.strip():
+        query = query.filter(WBProject.domain == domain.strip())
+    if status.strip():
+        query = query.filter(WBProject.status == status.strip())
+    order = {
+        "created": WBProject.created_at.desc(),
+        "name": WBProject.name.asc(),
+    }.get(sort, WBProject.updated_at.desc())
+    return query.order_by(order).all()
 
 
 @router.post("/projects", response_model=WBProjectResponse)
@@ -77,10 +97,13 @@ def create_from_mission(mission_id: int, current_user: User = Depends(get_curren
     return p
 
 
-def _get_project(pid: int, user: User, db: Session) -> WBProject:
+def _get_project(pid: int, user: User, db: Session, include_deleted: bool = False) -> WBProject:
     p = db.query(WBProject).filter(WBProject.id == pid, WBProject.user_id == user.id).first()
     if not p:
         raise HTTPException(status_code=404, detail="프로젝트를 찾을 수 없습니다")
+    if p.deleted_at is not None and not include_deleted:
+        # 보관함(삭제)된 프로젝트는 조회·수정 불가 — 먼저 복구해야 함
+        raise HTTPException(status_code=404, detail="보관함에 있는 프로젝트입니다. 먼저 복구해 주세요.")
     return p
 
 
@@ -117,11 +140,31 @@ def update_project(pid: int, data: WBProjectUpdate, current_user: User = Depends
 
 
 @router.delete("/projects/{pid}")
-def delete_project(pid: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    p = _get_project(pid, current_user, db)
-    db.delete(p)
+def delete_project(pid: int, purge: bool = False,
+                   current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """기본은 보관함으로 이동(소프트 삭제, 복구 가능).
+    purge=true 이면 이미 보관함에 있는 항목을 영구 삭제."""
+    p = _get_project(pid, current_user, db, include_deleted=True)
+    if purge:
+        if p.deleted_at is None:
+            raise HTTPException(status_code=400, detail="먼저 보관함으로 옮긴 뒤에 영구 삭제할 수 있어요.")
+        db.delete(p)   # cascade 로 하위 전부 제거
+        db.commit()
+        return {"purged": pid}
+    if p.deleted_at is None:
+        p.deleted_at = datetime.utcnow()
+        db.commit()
+    return {"trashed": pid}
+
+
+@router.post("/projects/{pid}/restore", response_model=WBProjectResponse)
+def restore_project(pid: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """보관함에서 프로젝트를 되살린다."""
+    p = _get_project(pid, current_user, db, include_deleted=True)
+    p.deleted_at = None
     db.commit()
-    return {"deleted": pid}
+    db.refresh(p)
+    return p
 
 
 # ─────────────── 페르소나 ───────────────

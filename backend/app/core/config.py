@@ -41,6 +41,11 @@ class Settings(BaseSettings):
     # Alembic 마이그레이션(alembic upgrade head)으로 스키마를 관리한다.
     AUTO_CREATE_ALL: bool = True
 
+    # 자동 정기 백업 (SQLite 온라인 백업). 서버가 켜져 있는 동안 주기적으로 스냅샷.
+    AUTO_BACKUP_ENABLED: bool = True
+    AUTO_BACKUP_INTERVAL_HOURS: int = 24    # 백업 주기(시간)
+    AUTO_BACKUP_KEEP: int = 30              # 보관 개수(초과분 자동 정리)
+
     APP_NAME: str = "디지털트윈AX랩"
     APP_VERSION: str = "1.0.0"
 

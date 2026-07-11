@@ -5,13 +5,14 @@ import { listBackups, createBackup, downloadBackup } from '../../services/api'
 import { toast } from '../../store/toastStore'
 
 interface Backup { name: string; size: number; created_at: string }
+interface AutoInfo { enabled: boolean; interval_hours: number; keep: number }
 
 const fmtSize = (b: number) => (b > 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${(b / 1024).toFixed(0)} KB`)
 const fmtDate = (s: string) => s.replace('T', ' ').slice(0, 19)
 
 export function BackupPanel() {
   const queryClient = useQueryClient()
-  const { data, isLoading } = useQuery<{ backups: Backup[] }>({ queryKey: ['admin-backups'], queryFn: listBackups })
+  const { data, isLoading } = useQuery<{ backups: Backup[]; auto?: AutoInfo }>({ queryKey: ['admin-backups'], queryFn: listBackups })
 
   const createMut = useMutation({
     mutationFn: createBackup,
@@ -41,6 +42,12 @@ export function BackupPanel() {
       <div className="px-6 py-2 bg-slate-50/60 border-b border-slate-100 text-xs text-slate-400 flex items-center gap-1.5">
         <Shield className="w-3.5 h-3.5" /> 서버 실행 중에도 안전한 스냅샷으로 저장됩니다. 관리자만 생성·다운로드할 수 있어요.
       </div>
+      {data?.auto?.enabled && (
+        <div className="px-6 py-2 bg-green-50/60 border-b border-green-100 text-xs text-green-700 flex items-center gap-1.5">
+          <DatabaseBackup className="w-3.5 h-3.5" />
+          자동 백업 켜짐 — {data.auto.interval_hours}시간마다 스냅샷, 최근 {data.auto.keep}개 보관(초과분 자동 정리).
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 text-brand-500 animate-spin" /></div>

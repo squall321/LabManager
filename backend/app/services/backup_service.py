@@ -76,3 +76,27 @@ def prune_backups(keep: int = 20) -> int:
     for f in to_delete:
         f.unlink()
     return len(to_delete)
+
+
+def _latest_backup_age_hours() -> float | None:
+    """가장 최근 백업의 경과 시간(시간). 백업이 없으면 None."""
+    if not BACKUP_DIR.exists():
+        return None
+    files = list(BACKUP_DIR.glob(f"{PREFIX}*.db"))
+    if not files:
+        return None
+    newest = max(f.stat().st_mtime for f in files)
+    return (datetime.now().timestamp() - newest) / 3600.0
+
+
+def backup_if_due(interval_hours: int, keep: int) -> dict | None:
+    """마지막 백업이 interval_hours 이상 지났으면(또는 없으면) 백업 후 오래된 것 정리.
+    재시작해도 최근 백업 시각을 파일에서 판단하므로 중복 백업하지 않는다."""
+    if not DB_PATH.exists():
+        return None
+    age = _latest_backup_age_hours()
+    if age is not None and age < interval_hours:
+        return None
+    result = create_backup()
+    prune_backups(keep)
+    return result

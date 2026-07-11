@@ -31,7 +31,11 @@ async def lifespan(app: FastAPI):
         seed_domains(db)
     finally:
         db.close()
+    # 자동 정기 백업 스케줄러 시작
+    from .services import backup_scheduler
+    backup_scheduler.start()
     yield
+    await backup_scheduler.stop()
 
 
 app = FastAPI(

@@ -11,6 +11,7 @@ _TEST_DB = _BACKEND / "data" / "test_ci.db"
 os.environ["DATABASE_URL"] = f"sqlite:///{_TEST_DB}"
 os.environ.setdefault("SECRET_KEY", "test-secret-key-for-ci")
 os.environ["SIGNUP_CODE"] = ""  # 기본 비활성 (개별 테스트에서 토글)
+os.environ["AUTO_BACKUP_ENABLED"] = "false"  # 테스트 중 자동 백업 태스크 비활성
 
 # 깨끗한 상태로 시작
 if _TEST_DB.exists():

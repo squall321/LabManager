@@ -43,6 +43,7 @@ class WBProjectResponse(WBProjectBase):
     user_id: int
     origin_mission_id: Optional[int] = None
     version: int = 1
+    deleted_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 

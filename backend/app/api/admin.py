@@ -11,6 +11,7 @@ from ..models.wb_domain import WBDomain
 from ..schemas.user import UserResponse
 from ..services.auth_service import get_all_users, load_users_from_yaml
 from ..services import backup_service
+from ..core.config import settings
 from .deps import get_current_admin
 
 router = APIRouter(prefix="/admin", tags=["관리자"])
@@ -131,7 +132,14 @@ def delete_domain(domain_id: int, current_user: User = Depends(get_current_admin
 # ─────────────── 데이터 백업 (관리자 전용) ───────────────
 @router.get("/backups")
 def backup_list(current_user: User = Depends(get_current_admin)):
-    return {"backups": backup_service.list_backups()}
+    return {
+        "backups": backup_service.list_backups(),
+        "auto": {
+            "enabled": settings.AUTO_BACKUP_ENABLED,
+            "interval_hours": settings.AUTO_BACKUP_INTERVAL_HOURS,
+            "keep": settings.AUTO_BACKUP_KEEP,
+        },
+    }
 
 
 @router.post("/backups")

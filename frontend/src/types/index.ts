@@ -152,6 +152,7 @@ export interface WBProject {
   visibility: Visibility
   origin_mission_id: number | null
   version: number
+  deleted_at: string | null
   created_at: string
   updated_at: string
 }

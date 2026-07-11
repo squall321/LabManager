@@ -137,13 +137,18 @@ export const toggleAgreementAgree = (id: number) => api.post(`/agreements/${id}/
 // Working Backwards
 export const getWBMeta = () => api.get('/wb/meta').then((r) => r.data)
 export const getPersonaCandidates = () => api.get('/wb/persona-candidates').then((r) => r.data)
-export const listWBProjects = () => api.get('/wb/projects').then((r) => r.data)
+export interface WBListParams { trashed?: boolean; q?: string; domain?: string; status?: string; sort?: string }
+export const listWBProjects = (params: WBListParams = {}) =>
+  api.get('/wb/projects', { params }).then((r) => r.data)
 export const createWBProject = (data: any) => api.post('/wb/projects', data).then((r) => r.data)
 export const createWBFromMission = (missionId: number) =>
   api.post(`/wb/projects/from-mission/${missionId}`).then((r) => r.data)
 export const getWBProject = (id: number) => api.get(`/wb/projects/${id}`).then((r) => r.data)
 export const updateWBProject = (id: number, data: any) => api.put(`/wb/projects/${id}`, data).then((r) => r.data)
-export const deleteWBProject = (id: number) => api.delete(`/wb/projects/${id}`).then((r) => r.data)
+// 기본 삭제는 보관함으로 이동(복구 가능). purge=true 는 영구 삭제.
+export const deleteWBProject = (id: number, purge = false) =>
+  api.delete(`/wb/projects/${id}`, { params: { purge } }).then((r) => r.data)
+export const restoreWBProject = (id: number) => api.post(`/wb/projects/${id}/restore`).then((r) => r.data)
 
 export const listPersonas = (pid: number) => api.get(`/wb/projects/${pid}/personas`).then((r) => r.data)
 export const addPersona = (pid: number, data: any) => api.post(`/wb/projects/${pid}/personas`, data).then((r) => r.data)
