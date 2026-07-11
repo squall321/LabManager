@@ -17,11 +17,31 @@ Working Backwards 프로젝트를 직접 읽고 채울 수 있어요.
 
 ## 1. 개인 API 토큰 발급
 
-MCP 서버는 **당신의 계정으로만** 동작하는 개인 토큰이 필요합니다.
+MCP 서버는 **당신의 계정으로만** 동작하는 개인 토큰이 필요합니다. 두 가지 방법이 있어요.
+
+### 방법 A — 웹 UI
 
 1. 앱 좌측 하단 **API 토큰** 메뉴로 이동
 2. 토큰 이름(예: `내 노트북 Claude`)을 입력하고 **새 토큰 발급**
 3. 발급 직후 **한 번만** 보이는 `lmk_...` 값을 안전한 곳에 복사
+
+### 방법 B — CLI (웹 UI 없이)
+
+대시보드에 로그인하지 않고, 서버에 붙지 않고도 DB에서 바로 발급할 수 있어요.
+백엔드 디렉터리(`backend/`)에서:
+
+```bash
+# 발급 (원문 토큰은 이때 한 번만 출력됨)
+python -m scripts.manage_tokens issue user@company.com --name "내 노트북 Claude"
+
+# 내 토큰 목록 (prefix만)
+python -m scripts.manage_tokens list user@company.com
+
+# 해지
+python -m scripts.manage_tokens revoke --id 3
+```
+
+DB 위치는 앱과 동일하게 `DATABASE_URL` 환경변수를 따릅니다.
 
 > 토큰은 해시로만 저장돼 다시 볼 수 없습니다. 잃어버리면 새로 발급하고 예전 것은 해지하세요.
 

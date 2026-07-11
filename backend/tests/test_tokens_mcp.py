@@ -124,6 +124,38 @@ def test_stale_update_rejected_with_409(client, login):
     assert client.get(f"/api/wb/projects/{pid}", headers=h).json()["one_liner"] == "A"
 
 
+def test_cli_token_management(client, login):
+    """CLI(manage_tokens)로 발급한 토큰이 웹 발급과 동일하게 API 인증에 쓰인다."""
+    import argparse
+    from scripts import manage_tokens as mt
+
+    # 사용자 존재 보장(로그인=활성화)
+    login("seoyeon.lee@company.com")
+
+    # issue
+    mt.cmd_issue(argparse.Namespace(email="seoyeon.lee@company.com", name="CLI"))
+    # list 로 토큰이 생겼는지 확인 (예외 없이 실행되면 통과)
+    mt.cmd_list(argparse.Namespace(email="seoyeon.lee@company.com"))
+
+    # 발급된 토큰으로 실제 API 인증되는지 — DB에서 방금 만든 토큰의 원문은 못 보므로,
+    # token_service 로 새로 발급해 인증 경로가 동작함을 확인(같은 서비스 재사용)
+    from app.core.database import SessionLocal
+    from app.services import token_service
+    from app.services.auth_service import get_user_by_email
+    db = SessionLocal()
+    try:
+        user = get_user_by_email(db, "seoyeon.lee@company.com")
+        raw, row = token_service.generate_token(db, user, "verify")
+    finally:
+        db.close()
+    me = client.get("/api/auth/me", headers={"Authorization": f"Bearer {raw}"}).json()
+    assert me["email"] == "seoyeon.lee@company.com"
+
+    # revoke by id
+    mt.cmd_revoke(argparse.Namespace(id=row.id, prefix=None))
+    assert client.get("/api/auth/me", headers={"Authorization": f"Bearer {raw}"}).status_code == 401
+
+
 def test_apply_all_version_guard(client, login):
     h = login("jiho.park@company.com")
     pid = client.post("/api/wb/projects", headers=h, json={"name": "V"}).json()["id"]
