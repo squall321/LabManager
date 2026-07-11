@@ -16,7 +16,7 @@ const LLM_LINKS = [
 /**
  * 인터뷰 모드: 대화/음성 정리 텍스트 → 전체 프롬프트 → AI → 전체 JSON 붙여넣기로 한 번에 채움.
  */
-export function InterviewBridge({ pid, onClose, onApplied }: { pid: number; onClose: () => void; onApplied: () => void }) {
+export function InterviewBridge({ pid, version, onClose, onApplied }: { pid: number; version?: number; onClose: () => void; onApplied: () => void }) {
   const [tab, setTab] = useState<'prompt' | 'paste'>('prompt')
   const [transcript, setTranscript] = useState('')
   const [prompt, setPrompt] = useState('')
@@ -29,14 +29,17 @@ export function InterviewBridge({ pid, onClose, onApplied }: { pid: number; onCl
     onError: () => toast.error('생성 실패'),
   })
   const applyMut = useMutation({
-    mutationFn: () => applyWBAll(pid, pasted),
+    mutationFn: () => applyWBAll(pid, pasted, false, version),
     onSuccess: (r) => {
       const a = r.applied || {}
       const parts = Object.entries(a).map(([k, v]) => `${k} ${v}`).join(' · ')
       toast.success(`정리된 내용을 반영했어요 (${parts})`)
       onApplied(); onClose()
     },
-    onError: (e: any) => toast.error(e?.response?.data?.detail || '해석하지 못했어요'),
+    onError: (e: any) => {
+      if (e?.response?.status === 409) { onApplied(); toast.error('다른 곳에서 먼저 수정됐어요. 창을 닫고 다시 시도해 주세요.') }
+      else toast.error(e?.response?.data?.detail || '해석하지 못했어요')
+    },
   })
 
   return (

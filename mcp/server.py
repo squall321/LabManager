@@ -128,6 +128,8 @@ def get_project(project_id: int) -> dict:
     except RuntimeError:
         validation = None
     return {
+        # 안전한 덮어쓰기용 현재 버전 — fill_project 의 expected_version 으로 되넘기면 충돌을 막을 수 있음
+        "version": proj.get("version"),
         "idea": proj,
         "personas": personas,
         "pains": pains,
@@ -150,7 +152,7 @@ def get_fill_schema(project_id: int, transcript: str = "") -> str:
 
 # ─────────────────────────── 쓰기 도구 ───────────────────────────
 @mcp.tool()
-def fill_project(project_id: int, content: str, replace: bool = False) -> dict:
+def fill_project(project_id: int, content: str, replace: bool = False, expected_version: int | None = None) -> dict:
     """
     인터뷰/대화에서 정리한 내용을 프로젝트 전체에 한 번에 반영합니다.
 
@@ -168,12 +170,19 @@ def fill_project(project_id: int, content: str, replace: bool = False) -> dict:
 
     get_fill_schema 의 지침에 맞춰 만드세요.
     replace=True 이면 기존 페르소나·문제·기능을 지우고 새로 채웁니다(기본은 추가).
+
+    안전한 덮어쓰기: 먼저 get_project 로 읽은 idea.version 을 expected_version 으로 넘기면,
+    그 사이 다른 곳(웹앱·다른 세션)에서 수정된 경우 반영이 거부됩니다(충돌 방지). 이때는
+    get_project 로 최신 상태를 다시 읽어 반영하세요.
     """
     if isinstance(content, (dict, list)):
         content = json.dumps(content, ensure_ascii=False)
     if not content or not str(content).strip():
         raise RuntimeError("채울 내용(content JSON)이 비어 있습니다.")
-    return _post(f"/wb/projects/{project_id}/apply-all", {"content": content}, replace=replace)
+    body: dict = {"content": content}
+    if expected_version is not None:
+        body["expected_version"] = expected_version
+    return _post(f"/wb/projects/{project_id}/apply-all", body, replace=replace)
 
 
 @mcp.tool()

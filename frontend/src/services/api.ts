@@ -174,8 +174,8 @@ export const exportWB = (pid: number) => api.get(`/wb/projects/${pid}/export`).t
 // Working Backwards — interview mode
 export const getInterviewPrompt = (pid: number, transcript: string) =>
   api.post(`/wb/projects/${pid}/prompt/interview`, { transcript }).then((r) => r.data)
-export const applyWBAll = (pid: number, content: string, replace = false) =>
-  api.post(`/wb/projects/${pid}/apply-all`, { content }, { params: { replace } }).then((r) => r.data)
+export const applyWBAll = (pid: number, content: string, replace = false, expectedVersion?: number) =>
+  api.post(`/wb/projects/${pid}/apply-all`, { content, expected_version: expectedVersion }, { params: { replace } }).then((r) => r.data)
 
 // API tokens (for MCP / external tools)
 export const listApiTokens = () => api.get('/tokens').then((r) => r.data)

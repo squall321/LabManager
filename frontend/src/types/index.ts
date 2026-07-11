@@ -151,6 +151,7 @@ export interface WBProject {
   status: string
   visibility: Visibility
   origin_mission_id: number | null
+  version: number
   created_at: string
   updated_at: string
 }

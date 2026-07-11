@@ -84,6 +84,20 @@ def _get_project(pid: int, user: User, db: Session) -> WBProject:
     return p
 
 
+def _check_version(project: WBProject, expected: int | None):
+    """낙관적 잠금: expected가 주어졌고 현재 버전과 다르면 409(다른 곳에서 먼저 수정됨)."""
+    if expected is not None and (project.version or 1) != expected:
+        raise HTTPException(
+            status_code=409,
+            detail="다른 곳(다른 기기·AI)에서 이 프로젝트가 먼저 수정됐어요. 새로고침 후 다시 시도해 주세요.",
+        )
+
+
+def _bump(project: WBProject):
+    """프로젝트 또는 하위 항목이 바뀔 때마다 버전을 올린다."""
+    project.version = (project.version or 1) + 1
+
+
 @router.get("/projects/{pid}", response_model=WBProjectResponse)
 def get_project(pid: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return _get_project(pid, current_user, db)
@@ -92,8 +106,11 @@ def get_project(pid: int, current_user: User = Depends(get_current_user), db: Se
 @router.put("/projects/{pid}", response_model=WBProjectResponse)
 def update_project(pid: int, data: WBProjectUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     p = _get_project(pid, current_user, db)
-    for k, v in data.model_dump(exclude_unset=True).items():
+    payload = data.model_dump(exclude_unset=True)
+    _check_version(p, payload.pop("expected_version", None))
+    for k, v in payload.items():
         setattr(p, k, v)
+    _bump(p)
     db.commit()
     db.refresh(p)
     return p
@@ -116,7 +133,7 @@ def list_personas(pid: int, current_user: User = Depends(get_current_user), db: 
 
 @router.post("/projects/{pid}/personas", response_model=WBPersonaResponse)
 def add_persona(pid: int, data: WBPersonaCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    _get_project(pid, current_user, db)
+    _bump(_get_project(pid, current_user, db))
     payload = data.model_dump()
     # 실제 동료(공개 리포트) 기반이면 스타일 기본값 자동 채움
     if data.source_user_id:
@@ -150,6 +167,7 @@ def update_persona(pid: int, persona_id: int, data: WBPersonaUpdate, current_use
     persona = _get_persona(pid, persona_id, current_user, db)
     for k, v in data.model_dump(exclude_unset=True).items():
         setattr(persona, k, v)
+    _bump(_get_project(pid, current_user, db))
     db.commit()
     db.refresh(persona)
     return persona
@@ -159,6 +177,7 @@ def update_persona(pid: int, persona_id: int, data: WBPersonaUpdate, current_use
 def delete_persona(pid: int, persona_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     persona = _get_persona(pid, persona_id, current_user, db)
     db.delete(persona)
+    _bump(_get_project(pid, current_user, db))
     db.commit()
     return {"deleted": persona_id}
 
@@ -172,6 +191,7 @@ def set_scenarios(pid: int, persona_id: int, scenarios: List[WBScenarioIn],
         d = s.model_dump()
         d["order"] = d.get("order", i)
         db.add(WBScenario(persona_id=persona.id, **d))
+    _bump(_get_project(pid, current_user, db))
     db.commit()
     return {"ok": True, "count": len(scenarios)}
 
@@ -185,7 +205,7 @@ def list_pains(pid: int, current_user: User = Depends(get_current_user), db: Ses
 
 @router.post("/projects/{pid}/pains", response_model=WBPainResponse)
 def add_pain(pid: int, data: WBPainCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    _get_project(pid, current_user, db)
+    _bump(_get_project(pid, current_user, db))
     pain = WBPainCluster(project_id=pid, **data.model_dump())
     db.add(pain)
     db.commit()
@@ -200,6 +220,7 @@ def delete_pain(pid: int, pain_id: int, current_user: User = Depends(get_current
     if not pain:
         raise HTTPException(status_code=404, detail="찾을 수 없습니다")
     db.delete(pain)
+    _bump(_get_project(pid, current_user, db))
     db.commit()
     return {"deleted": pain_id}
 
@@ -215,6 +236,7 @@ def import_pains(pid: int, current_user: User = Depends(get_current_user), db: S
     ).order_by(WorkFriction.created_at.desc()).limit(20).all()
     existing = {(p.source, p.source_ref) for p in
                 db.query(WBPainCluster).filter(WBPainCluster.project_id == pid).all()}
+    project = _get_project(pid, current_user, db)
     for f in frictions:
         ref = f"friction:{f.id}"
         if ("friction", ref) in existing:
@@ -237,6 +259,8 @@ def import_pains(pid: int, current_user: User = Depends(get_current_user), db: S
                              description=f"협업 회고에서 최근 반복 관찰 (기여자 {int(cnt)}명)",
                              source="reflection", source_ref=ref))
         added += 1
+    if added:
+        _bump(project)
     db.commit()
     return {"imported": added}
 
@@ -253,7 +277,7 @@ def get_prfaq(pid: int, current_user: User = Depends(get_current_user), db: Sess
 
 @router.put("/projects/{pid}/prfaq", response_model=WBPRFAQResponse)
 def upsert_prfaq(pid: int, data: WBPRFAQIn, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    _get_project(pid, current_user, db)
+    _bump(_get_project(pid, current_user, db))
     pf = db.query(WBPRFAQ).filter(WBPRFAQ.project_id == pid).first()
     payload = data.model_dump()
     payload["faq"] = [q.model_dump() if hasattr(q, "model_dump") else q for q in data.faq]
@@ -278,7 +302,7 @@ def list_features(pid: int, current_user: User = Depends(get_current_user), db: 
 
 @router.post("/projects/{pid}/features", response_model=WBFeatureResponse)
 def add_feature(pid: int, data: WBFeatureCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    _get_project(pid, current_user, db)
+    _bump(_get_project(pid, current_user, db))
     f = WBFeature(project_id=pid, **data.model_dump())
     db.add(f)
     db.commit()
@@ -288,7 +312,7 @@ def add_feature(pid: int, data: WBFeatureCreate, current_user: User = Depends(ge
 
 @router.put("/projects/{pid}/features/{fid}", response_model=WBFeatureResponse)
 def update_feature(pid: int, fid: int, data: WBFeatureUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    _get_project(pid, current_user, db)
+    _bump(_get_project(pid, current_user, db))
     f = db.query(WBFeature).filter(WBFeature.id == fid, WBFeature.project_id == pid).first()
     if not f:
         raise HTTPException(status_code=404, detail="찾을 수 없습니다")
@@ -306,6 +330,7 @@ def delete_feature(pid: int, fid: int, current_user: User = Depends(get_current_
     if not f:
         raise HTTPException(status_code=404, detail="찾을 수 없습니다")
     db.delete(f)
+    _bump(_get_project(pid, current_user, db))
     db.commit()
     return {"deleted": fid}
 
@@ -322,7 +347,7 @@ def get_validation(pid: int, current_user: User = Depends(get_current_user), db:
 
 @router.put("/projects/{pid}/validation", response_model=WBValidationResponse)
 def upsert_validation(pid: int, data: WBValidationIn, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    _get_project(pid, current_user, db)
+    _bump(_get_project(pid, current_user, db))
     valid_keys = {i["key"] for i in wb_data.VALIDATION_ITEMS}
     scores = {k: max(1, min(5, int(v))) for k, v in data.scores.items() if k in valid_keys}
     total = sum(scores.values())
@@ -370,6 +395,8 @@ def gen_today(pid: int, current_user: User = Depends(get_current_user), db: Sess
     personas = db.query(WBPersona).filter(WBPersona.project_id == pid).all()
     for persona in personas:
         persona.today_statement = wb_templates.today_statement(persona, p)
+    if personas:
+        _bump(p)
     db.commit()
     return {"generated": len(personas)}
 
@@ -387,6 +414,7 @@ def gen_prfaq(pid: int, current_user: User = Depends(get_current_user), db: Sess
     else:
         pf = WBPRFAQ(project_id=pid, **skeleton)
         db.add(pf)
+    _bump(p)
     db.commit()
     db.refresh(pf)
     return pf
@@ -395,6 +423,7 @@ def gen_prfaq(pid: int, current_user: User = Depends(get_current_user), db: Sess
 # ─────────────── LLM 브릿지: 단계별 프롬프트 생성 / JSON 붙여넣기 반영 ───────────────
 class ApplyBody(BaseModel):
     content: str   # LLM이 돌려준 JSON (붙여넣기)
+    expected_version: int | None = None   # 낙관적 잠금(선택): 다르면 409
 
 
 def _scenarios_text(db: Session, pid: int) -> str:
@@ -516,6 +545,7 @@ def apply_all(pid: int, body: ApplyBody, replace: bool = False,
     기존 데이터가 부분 삭제/오염되지 않는다.
     """
     project = _get_project(pid, current_user, db)
+    _check_version(project, body.expected_version)
     if body.content and len(body.content.encode("utf-8")) > MAX_APPLY_BYTES:
         raise HTTPException(status_code=413, detail="붙여넣은 내용이 너무 큽니다. JSON 부분만 붙여넣어 주세요.")
     try:
@@ -572,16 +602,18 @@ def apply_all(pid: int, body: ApplyBody, replace: bool = False,
                 db.add(WBPRFAQ(project_id=pid, **fields))
             result["prfaq"] = 1
 
+        if not result:
+            raise HTTPException(status_code=400, detail="반영할 내용이 없어요. idea/personas/pains/features/prfaq 중 하나 이상이 필요합니다.")
+        _bump(project)
         db.flush()   # 커밋 전에 DB 제약 위반을 여기서 드러내 롤백 가능하게
         db.commit()
     except HTTPException:
+        db.rollback()
         raise
     except Exception:
         db.rollback()
         raise HTTPException(status_code=400, detail="반영 중 오류가 발생했어요. JSON 구조를 확인해 주세요. (변경사항은 저장되지 않았습니다)")
 
-    if not result:
-        raise HTTPException(status_code=400, detail="반영할 내용이 없어요. idea/personas/pains/features/prfaq 중 하나 이상이 필요합니다.")
     return {"applied": result}
 
 

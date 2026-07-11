@@ -22,6 +22,9 @@ class WBProject(Base):
     status = Column(String, default="draft")          # draft | validated | archived
     visibility = Column(String, default="private")
     origin_mission_id = Column(Integer, nullable=True)  # WorkCraft 미션에서 승격된 경우
+    # 낙관적 동시성 제어: 프로젝트 또는 하위(persona/pain/prfaq…) 변경마다 증가.
+    # 클라이언트가 읽은 version을 되보내 서로의 변경을 덮어쓰지 않게 한다.
+    version = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

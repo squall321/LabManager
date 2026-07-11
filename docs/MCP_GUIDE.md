@@ -129,7 +129,7 @@ Claude 는 내부적으로 이렇게 동작합니다:
 | `create_project` | 새 프로젝트 생성 |
 | `get_project` | 프로젝트 전체 내용 읽기 |
 | `get_fill_schema` | 한 번에 채우기용 JSON 스키마·지침(인터뷰 포함) |
-| `fill_project` | 인터뷰 내용을 프로젝트 전체에 반영 |
+| `fill_project` | 인터뷰 내용을 프로젝트 전체에 반영 (충돌 방지: `expected_version`) |
 | `update_idea` | 아이디어 캔버스 필드 부분 수정 |
 | `add_persona` / `add_pain` / `add_feature` | 개별 항목 추가 |
 | `export_report` | Markdown 리포트로 내보내기 |
@@ -142,6 +142,11 @@ Claude 는 내부적으로 이렇게 동작합니다:
 - **`인증 실패`** — 토큰이 해지됐거나 오타입니다. 앱에서 새로 발급하세요.
 - **`요청 실패 (Connection…)`** — 앱 백엔드가 `:8010` 에서 실행 중인지 확인하세요.
 - **도구가 안 보임** — Claude Desktop 을 완전히 종료 후 재실행. `command` 경로가 실제 python 실행파일인지 확인.
+- **`다른 곳에서 먼저 수정됐어요`(409)** — 웹앱이나 다른 세션에서 그 프로젝트를 방금 바꿨습니다.
+  `get_project` 로 최신 상태를 다시 읽고(새 `version` 확인) 다시 반영하세요. 이건 **덮어쓰기 사고를 막는 정상 동작**입니다.
+
+> 동시 편집 안전장치: 여러 사람/AI가 같은 프로젝트를 동시에 만져도 서로의 변경을 조용히 덮어쓰지 않습니다.
+> `get_project` 가 준 `version` 을 `fill_project(expected_version=...)` 로 되넘기면, 그 사이 바뀐 경우 409로 거부됩니다.
 
 > 웹앱의 **인터뷰로 채우기** 버튼(Working Backwards 화면 우측 상단)은 MCP 없이도 같은 일을 합니다.
 > 프롬프트를 복사해 아무 AI 챗에 붙여넣고, 돌려받은 JSON 을 다시 붙여넣으면 프로젝트가 채워집니다.

@@ -94,3 +94,47 @@ def test_apply_all_caps_item_count(client, login):
     r = client.post(f"/api/wb/projects/{pid}/apply-all", headers=h,
                     json={"content": '{"personas":[%s]}' % personas}).json()
     assert r["applied"]["personas"] == 100  # 상한 적용
+
+
+# ─────────────── 동시성(낙관적 잠금) ───────────────
+def test_version_starts_at_one_and_bumps(client, login):
+    h = login("seoyeon.lee@company.com")
+    p = client.post("/api/wb/projects", headers=h, json={"name": "V"}).json()
+    assert p["version"] == 1
+    # 하위 변경도 프로젝트 버전을 올린다
+    client.post(f"/api/wb/projects/{p['id']}/personas", headers=h, json={"name": "A"})
+    v_after_persona = client.get(f"/api/wb/projects/{p['id']}", headers=h).json()["version"]
+    assert v_after_persona == 2
+    # idea 수정 → 또 증가
+    client.put(f"/api/wb/projects/{p['id']}", headers=h, json={"one_liner": "x"})
+    assert client.get(f"/api/wb/projects/{p['id']}", headers=h).json()["version"] == 3
+
+
+def test_stale_update_rejected_with_409(client, login):
+    h = login("seoyeon.lee@company.com")
+    pid = client.post("/api/wb/projects", headers=h, json={"name": "V"}).json()["id"]
+    v = client.get(f"/api/wb/projects/{pid}", headers=h).json()["version"]
+    # 첫 저장 성공(버전 올라감)
+    r1 = client.put(f"/api/wb/projects/{pid}", headers=h, json={"one_liner": "A", "expected_version": v})
+    assert r1.status_code == 200
+    # 같은(이제는 낡은) 버전으로 다시 → 409
+    r2 = client.put(f"/api/wb/projects/{pid}", headers=h, json={"one_liner": "B", "expected_version": v})
+    assert r2.status_code == 409
+    # 덮어쓰기 안 됨
+    assert client.get(f"/api/wb/projects/{pid}", headers=h).json()["one_liner"] == "A"
+
+
+def test_apply_all_version_guard(client, login):
+    h = login("jiho.park@company.com")
+    pid = client.post("/api/wb/projects", headers=h, json={"name": "V"}).json()["id"]
+    v = client.get(f"/api/wb/projects/{pid}", headers=h).json()["version"]
+    # 올바른 버전 → 성공 + 버전 증가
+    ok = client.post(f"/api/wb/projects/{pid}/apply-all", headers=h,
+                     json={"content": '{"personas":[{"name":"A"}]}', "expected_version": v})
+    assert ok.status_code == 200
+    assert client.get(f"/api/wb/projects/{pid}", headers=h).json()["version"] == v + 1
+    # 낡은 버전 → 409, 반영 안 됨
+    stale = client.post(f"/api/wb/projects/{pid}/apply-all", headers=h,
+                        json={"content": '{"personas":[{"name":"B"}]}', "expected_version": v})
+    assert stale.status_code == 409
+    assert len(client.get(f"/api/wb/projects/{pid}/personas", headers=h).json()) == 1

@@ -82,7 +82,7 @@ export default function WBWorkspacePage() {
       </motion.div>
 
       {interview && (
-        <InterviewBridge pid={pid} onClose={() => setInterview(false)}
+        <InterviewBridge pid={pid} version={project.version} onClose={() => setInterview(false)}
           onApplied={() => {
             // 이 프로젝트에 관련된 캐시만 새로고침
             for (const key of ['wb-project', 'wb-personas', 'wb-pains', 'wb-features', 'wb-prfaq', 'wb-validation', 'wb-export']) {
@@ -170,9 +170,15 @@ function IdeaStep({ project, meta }: { project: WBProject; meta: WBMeta }) {
     current_alternative: project.current_alternative, success_criteria: project.success_criteria, not_doing: project.not_doing,
   })
   const saveMut = useMutation({
-    mutationFn: () => api.updateWBProject(project.id, form),
+    // 낙관적 잠금: 읽은 버전을 되보내 다른 곳의 수정을 덮어쓰지 않게 함
+    mutationFn: () => api.updateWBProject(project.id, { ...form, expected_version: project.version }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['wb-project', project.id] }); toast.success('저장했어요') },
-    onError: () => toast.error('저장 실패'),
+    onError: (e: any) => {
+      if (e?.response?.status === 409) {
+        toast.error('다른 곳에서 먼저 수정됐어요. 새로고침 후 다시 저장해 주세요.')
+        queryClient.invalidateQueries({ queryKey: ['wb-project', project.id] })
+      } else toast.error('저장 실패')
+    },
   })
   const set = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }))
   const field = (k: keyof typeof form, label: string, ph = '', area = false) => (

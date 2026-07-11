@@ -34,12 +34,15 @@ class WBProjectUpdate(BaseModel):
     not_doing: Optional[str] = None
     status: Optional[str] = None
     visibility: Optional[str] = None
+    # 낙관적 잠금: 지정하면 현재 version과 다를 때 409로 거부(덮어쓰기 방지). 생략 시 검사 안 함.
+    expected_version: Optional[int] = None
 
 
 class WBProjectResponse(WBProjectBase):
     id: int
     user_id: int
     origin_mission_id: Optional[int] = None
+    version: int = 1
     created_at: datetime
     updated_at: datetime
 
