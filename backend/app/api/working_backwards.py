@@ -502,11 +502,22 @@ def interview_prompt(pid: int, body: InterviewPromptBody,
     return {"prompt": wb_prompts.interview_prompt(p, body.transcript)}
 
 
+# AI가 돌려주는 JSON은 예측 불가 — 과도한 크기/항목 수를 방어한다.
+MAX_APPLY_BYTES = 512 * 1024   # 붙여넣는 JSON 상한 (~0.5MB)
+MAX_ITEMS_PER_SECTION = 100    # personas/pains/features 섹션당 상한
+
+
 @router.post("/projects/{pid}/apply-all")
 def apply_all(pid: int, body: ApplyBody, replace: bool = False,
               current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """전체 JSON(idea/personas/pains/features/prfaq)을 한 번에 반영."""
+    """전체 JSON(idea/personas/pains/features/prfaq)을 한 번에 반영.
+
+    전부 성공하거나 전부 롤백되는 원자적 반영 — AI 출력 일부가 어긋나도
+    기존 데이터가 부분 삭제/오염되지 않는다.
+    """
     project = _get_project(pid, current_user, db)
+    if body.content and len(body.content.encode("utf-8")) > MAX_APPLY_BYTES:
+        raise HTTPException(status_code=413, detail="붙여넣은 내용이 너무 큽니다. JSON 부분만 붙여넣어 주세요.")
     try:
         data = wb_apply.parse_json_lenient(body.content)
     except ValueError as e:
@@ -515,52 +526,62 @@ def apply_all(pid: int, body: ApplyBody, replace: bool = False,
         raise HTTPException(status_code=400, detail="객체 형태의 JSON이 필요합니다")
 
     result = {}
-    # idea — 빈 값이 아닌 필드만 갱신
-    idea = data.get("idea")
-    if isinstance(idea, dict):
-        allowed = {"one_liner", "current_problem", "target_user", "expected_benefit",
-                   "current_alternative", "success_criteria", "not_doing"}
-        n = 0
-        for k, v in idea.items():
-            if k in allowed and isinstance(v, str) and v.strip():
-                setattr(project, k, v.strip()); n += 1
-        result["idea"] = n
+    try:
+        # idea — 빈 값이 아닌 필드만 갱신
+        idea = data.get("idea")
+        if isinstance(idea, dict):
+            allowed = {"one_liner", "current_problem", "target_user", "expected_benefit",
+                       "current_alternative", "success_criteria", "not_doing"}
+            n = 0
+            for k, v in idea.items():
+                if k in allowed and isinstance(v, str) and v.strip():
+                    setattr(project, k, v.strip()); n += 1
+            result["idea"] = n
 
-    if "personas" in data:
-        if replace:
-            db.query(WBPersona).filter(WBPersona.project_id == pid).delete()
-        items = wb_apply.extract_personas(data["personas"] if isinstance(data.get("personas"), list) else data)
-        for it in items:
-            db.add(WBPersona(project_id=pid, **it))
-        result["personas"] = len(items)
+        if "personas" in data:
+            items = wb_apply.extract_personas(data["personas"] if isinstance(data.get("personas"), list) else data)[:MAX_ITEMS_PER_SECTION]
+            if replace:
+                db.query(WBPersona).filter(WBPersona.project_id == pid).delete()
+            for it in items:
+                db.add(WBPersona(project_id=pid, **it))
+            result["personas"] = len(items)
 
-    if "pains" in data:
-        if replace:
-            db.query(WBPainCluster).filter(WBPainCluster.project_id == pid).delete()
-        items = wb_apply.extract_pains(data["pains"] if isinstance(data.get("pains"), list) else data)
-        for it in items:
-            db.add(WBPainCluster(project_id=pid, source="llm", **it))
-        result["pains"] = len(items)
+        if "pains" in data:
+            items = wb_apply.extract_pains(data["pains"] if isinstance(data.get("pains"), list) else data)[:MAX_ITEMS_PER_SECTION]
+            if replace:
+                db.query(WBPainCluster).filter(WBPainCluster.project_id == pid).delete()
+            for it in items:
+                db.add(WBPainCluster(project_id=pid, source="llm", **it))
+            result["pains"] = len(items)
 
-    if "features" in data:
-        if replace:
-            db.query(WBFeature).filter(WBFeature.project_id == pid).delete()
-        items = wb_apply.extract_features(data["features"] if isinstance(data.get("features"), list) else data)
-        for it in items:
-            db.add(WBFeature(project_id=pid, **it))
-        result["features"] = len(items)
+        if "features" in data:
+            items = wb_apply.extract_features(data["features"] if isinstance(data.get("features"), list) else data)[:MAX_ITEMS_PER_SECTION]
+            if replace:
+                db.query(WBFeature).filter(WBFeature.project_id == pid).delete()
+            for it in items:
+                db.add(WBFeature(project_id=pid, **it))
+            result["features"] = len(items)
 
-    if isinstance(data.get("prfaq"), dict):
-        fields = wb_apply.extract_prfaq(data["prfaq"])
-        pf = db.query(WBPRFAQ).filter(WBPRFAQ.project_id == pid).first()
-        if pf:
-            for k, v in fields.items():
-                setattr(pf, k, v)
-        else:
-            db.add(WBPRFAQ(project_id=pid, **fields))
-        result["prfaq"] = 1
+        if isinstance(data.get("prfaq"), dict):
+            fields = wb_apply.extract_prfaq(data["prfaq"])
+            pf = db.query(WBPRFAQ).filter(WBPRFAQ.project_id == pid).first()
+            if pf:
+                for k, v in fields.items():
+                    setattr(pf, k, v)
+            else:
+                db.add(WBPRFAQ(project_id=pid, **fields))
+            result["prfaq"] = 1
 
-    db.commit()
+        db.flush()   # 커밋 전에 DB 제약 위반을 여기서 드러내 롤백 가능하게
+        db.commit()
+    except HTTPException:
+        raise
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="반영 중 오류가 발생했어요. JSON 구조를 확인해 주세요. (변경사항은 저장되지 않았습니다)")
+
+    if not result:
+        raise HTTPException(status_code=400, detail="반영할 내용이 없어요. idea/personas/pains/features/prfaq 중 하나 이상이 필요합니다.")
     return {"applied": result}
 
 

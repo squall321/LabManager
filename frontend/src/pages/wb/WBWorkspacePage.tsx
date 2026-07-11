@@ -83,7 +83,12 @@ export default function WBWorkspacePage() {
 
       {interview && (
         <InterviewBridge pid={pid} onClose={() => setInterview(false)}
-          onApplied={() => queryClient.invalidateQueries()} />
+          onApplied={() => {
+            // 이 프로젝트에 관련된 캐시만 새로고침
+            for (const key of ['wb-project', 'wb-personas', 'wb-pains', 'wb-features', 'wb-prfaq', 'wb-validation', 'wb-export']) {
+              queryClient.invalidateQueries({ queryKey: [key, pid] })
+            }
+          }} />
       )}
 
       <div className="grid lg:grid-cols-[200px_1fr] gap-6">

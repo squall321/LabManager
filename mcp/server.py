@@ -56,19 +56,29 @@ def _handle(resp: httpx.Response) -> Any:
     return resp.text
 
 
+def _request(method: str, path: str, *, body: Any = None, params: dict | None = None) -> Any:
+    try:
+        with _client() as c:
+            return _handle(c.request(method, path, json=body, params=params or None))
+    except httpx.ConnectError:
+        raise RuntimeError(
+            f"앱 백엔드에 연결할 수 없습니다({API_BASE}). "
+            "백엔드 서버가 실행 중인지, LABMGR_API 주소가 맞는지 확인하세요."
+        )
+    except httpx.TimeoutException:
+        raise RuntimeError("요청이 시간 내에 응답하지 않았습니다. 잠시 후 다시 시도하세요.")
+
+
 def _get(path: str, **params) -> Any:
-    with _client() as c:
-        return _handle(c.get(path, params=params or None))
+    return _request("GET", path, params=params)
 
 
 def _post(path: str, body: Any = None, **params) -> Any:
-    with _client() as c:
-        return _handle(c.post(path, json=body, params=params or None))
+    return _request("POST", path, body=body, params=params)
 
 
 def _put(path: str, body: Any = None) -> Any:
-    with _client() as c:
-        return _handle(c.put(path, json=body))
+    return _request("PUT", path, body=body)
 
 
 # ─────────────────────────── 읽기 도구 ───────────────────────────
@@ -97,7 +107,9 @@ def list_projects() -> list[dict]:
 @mcp.tool()
 def create_project(name: str, one_liner: str = "", current_problem: str = "") -> dict:
     """새 Working Backwards 프로젝트를 만듭니다. 인터뷰로 새 아이디어를 정리했다면 여기서 프로젝트부터 만든 뒤 fill_project로 채우세요."""
-    return _post("/wb/projects", {"name": name, "one_liner": one_liner, "current_problem": current_problem})
+    if not name or not name.strip():
+        raise RuntimeError("프로젝트 이름(name)이 필요합니다.")
+    return _post("/wb/projects", {"name": name.strip(), "one_liner": one_liner, "current_problem": current_problem})
 
 
 @mcp.tool()
@@ -159,6 +171,8 @@ def fill_project(project_id: int, content: str, replace: bool = False) -> dict:
     """
     if isinstance(content, (dict, list)):
         content = json.dumps(content, ensure_ascii=False)
+    if not content or not str(content).strip():
+        raise RuntimeError("채울 내용(content JSON)이 비어 있습니다.")
     return _post(f"/wb/projects/{project_id}/apply-all", {"content": content}, replace=replace)
 
 

@@ -49,3 +49,48 @@ def test_interview_apply_all(client, login):
     assert len(client.get(f"/api/wb/projects/{pid}/personas", headers=h).json()) == 1
     pf = client.get(f"/api/wb/projects/{pid}/prfaq", headers=h).json()
     assert pf["headline"] == "H"
+
+
+def test_apply_all_invalid_json_rejected(client, login):
+    h = login("jiho.park@company.com")
+    pid = client.post("/api/wb/projects", headers=h, json={"name": "P"}).json()["id"]
+    # 파싱 불가 → 400
+    r = client.post(f"/api/wb/projects/{pid}/apply-all", headers=h, json={"content": "이건 JSON이 아님"})
+    assert r.status_code == 400
+    # 반영할 섹션이 하나도 없음 → 400
+    r2 = client.post(f"/api/wb/projects/{pid}/apply-all", headers=h, json={"content": "{}"})
+    assert r2.status_code == 400
+
+
+def test_apply_all_replace_is_atomic_on_bad_payload(client, login):
+    """replace=True 인데 새 payload 가 어긋나도 기존 데이터가 지워지면 안 된다."""
+    h = login("jiho.park@company.com")
+    pid = client.post("/api/wb/projects", headers=h, json={"name": "P"}).json()["id"]
+    # 기존 페르소나 1건 심기
+    client.post(f"/api/wb/projects/{pid}/apply-all", headers=h,
+                json={"content": '{"personas":[{"name":"기존"}]}'})
+    assert len(client.get(f"/api/wb/projects/{pid}/personas", headers=h).json()) == 1
+    # 유효하지만 이름 없는 페르소나만 담긴 replace → 추출 결과 0건, 기존은 유지되되 replace 로 비워질 수 있음.
+    # 파싱 불가한 replace 요청은 기존 데이터를 건드리지 않아야 한다.
+    r = client.post(f"/api/wb/projects/{pid}/apply-all?replace=true", headers=h,
+                    json={"content": "깨진 payload"})
+    assert r.status_code == 400
+    # 기존 페르소나 그대로
+    assert len(client.get(f"/api/wb/projects/{pid}/personas", headers=h).json()) == 1
+
+
+def test_apply_all_rejects_oversized(client, login):
+    h = login("jiho.park@company.com")
+    pid = client.post("/api/wb/projects", headers=h, json={"name": "P"}).json()["id"]
+    big = "x" * (600 * 1024)
+    r = client.post(f"/api/wb/projects/{pid}/apply-all", headers=h, json={"content": big})
+    assert r.status_code == 413
+
+
+def test_apply_all_caps_item_count(client, login):
+    h = login("jiho.park@company.com")
+    pid = client.post("/api/wb/projects", headers=h, json={"name": "P"}).json()["id"]
+    personas = ",".join('{"name":"P%d"}' % i for i in range(150))
+    r = client.post(f"/api/wb/projects/{pid}/apply-all", headers=h,
+                    json={"content": '{"personas":[%s]}' % personas}).json()
+    assert r["applied"]["personas"] == 100  # 상한 적용
