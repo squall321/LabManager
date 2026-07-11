@@ -40,6 +40,29 @@ def persona_candidates(current_user: User = Depends(get_current_user), db: Sessi
     return wb_persona.candidates_from_reports(reports, users)
 
 
+# ─────────────── 대시보드 요약 ───────────────
+@router.get("/stats")
+def wb_stats(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """내 WB 활동 요약 — 대시보드 카드용. 보관함(삭제) 제외."""
+    base = db.query(WBProject).filter(
+        WBProject.user_id == current_user.id, WBProject.deleted_at.is_(None)
+    )
+    total = base.count()
+    validated = base.filter(WBProject.status == "validated").count()
+    recent = (
+        base.order_by(WBProject.updated_at.desc()).limit(3).all()
+    )
+    return {
+        "total": total,
+        "validated": validated,
+        "draft": total - validated,
+        "recent": [
+            {"id": p.id, "name": p.name, "status": p.status, "updated_at": p.updated_at.isoformat()}
+            for p in recent
+        ],
+    }
+
+
 # ─────────────── 프로젝트 CRUD ───────────────
 @router.get("/projects", response_model=List[WBProjectResponse])
 def list_projects(
@@ -165,6 +188,60 @@ def restore_project(pid: int, current_user: User = Depends(get_current_user), db
     db.commit()
     db.refresh(p)
     return p
+
+
+@router.post("/projects/{pid}/duplicate", response_model=WBProjectResponse)
+def duplicate_project(pid: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """프로젝트 전체를 통째로 복제(페르소나·시나리오·문제·PR/FAQ·기능·검증 포함).
+    비슷한 발굴을 템플릿처럼 재사용할 때 쓴다. 상태는 초안으로 초기화."""
+    src = _get_project(pid, current_user, db)
+    idea_fields = {
+        "domain", "one_liner", "current_problem", "target_user", "expected_benefit",
+        "current_alternative", "success_criteria", "not_doing", "visibility",
+    }
+    dup = WBProject(
+        user_id=current_user.id, name=f"{src.name} (복제)", status="draft",
+        **{f: getattr(src, f) for f in idea_fields},
+    )
+    db.add(dup)
+    db.flush()   # dup.id 확보
+
+    for per in db.query(WBPersona).filter(WBPersona.project_id == pid).all():
+        new_per = WBPersona(
+            project_id=dup.id, name=per.name, role=per.role, source_user_id=per.source_user_id,
+            style_code=per.style_code, goals=per.goals, pains=per.pains, fears=per.fears,
+            comm_style=per.comm_style, success_criteria=per.success_criteria, today_statement=per.today_statement,
+        )
+        db.add(new_per)
+        db.flush()   # new_per.id
+        for sc in db.query(WBScenario).filter(WBScenario.persona_id == per.id).all():
+            db.add(WBScenario(persona_id=new_per.id, time_block=sc.time_block, activity=sc.activity,
+                              pain_point=sc.pain_point, opportunity=sc.opportunity, order=sc.order))
+
+    for pc in db.query(WBPainCluster).filter(WBPainCluster.project_id == pid).all():
+        db.add(WBPainCluster(project_id=dup.id, title=pc.title, description=pc.description,
+                             source=pc.source, source_ref=pc.source_ref))
+
+    for f in db.query(WBFeature).filter(WBFeature.project_id == pid).all():
+        db.add(WBFeature(project_id=dup.id, name=f.name, description=f.description,
+                         priority=f.priority, reason=f.reason, related_pain_id=f.related_pain_id))
+
+    src_pf = db.query(WBPRFAQ).filter(WBPRFAQ.project_id == pid).first()
+    if src_pf:
+        db.add(WBPRFAQ(project_id=dup.id, headline=src_pf.headline, subtitle=src_pf.subtitle,
+                       summary=src_pf.summary, customer_problem=src_pf.customer_problem,
+                       opportunity=src_pf.opportunity, solution=src_pf.solution, leader_quote=src_pf.leader_quote,
+                       customer_experience=src_pf.customer_experience, testimonial=src_pf.testimonial,
+                       cta=src_pf.cta, faq=src_pf.faq, risks=src_pf.risks))
+
+    src_val = db.query(WBValidation).filter(WBValidation.project_id == pid).first()
+    if src_val:
+        db.add(WBValidation(project_id=dup.id, scores=src_val.scores, total=src_val.total,
+                            verdict=src_val.verdict, note=src_val.note))
+
+    db.commit()
+    db.refresh(dup)
+    return dup
 
 
 # ─────────────── 페르소나 ───────────────
@@ -579,6 +656,73 @@ MAX_APPLY_BYTES = 512 * 1024   # 붙여넣는 JSON 상한 (~0.5MB)
 MAX_ITEMS_PER_SECTION = 100    # personas/pains/features 섹션당 상한
 
 
+def _parse_apply_content(content: str) -> dict:
+    """붙여넣은 content(JSON) → dict. 크기/형식 방어 포함."""
+    if content and len(content.encode("utf-8")) > MAX_APPLY_BYTES:
+        raise HTTPException(status_code=413, detail="붙여넣은 내용이 너무 큽니다. JSON 부분만 붙여넣어 주세요.")
+    try:
+        data = wb_apply.parse_json_lenient(content)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if not isinstance(data, dict):
+        raise HTTPException(status_code=400, detail="객체 형태의 JSON이 필요합니다")
+    return data
+
+
+def _apply_data_to_project(project: WBProject, data: dict, db: Session, replace: bool) -> dict:
+    """idea/personas/pains/features/prfaq 를 프로젝트에 반영(원자적).
+    새 프로젝트 생성 직후에도 재사용된다. 반영 항목이 없으면 400."""
+    pid = project.id
+    result: dict = {}
+    idea = data.get("idea")
+    if isinstance(idea, dict):
+        allowed = {"one_liner", "current_problem", "target_user", "expected_benefit",
+                   "current_alternative", "success_criteria", "not_doing"}
+        n = 0
+        for k, v in idea.items():
+            if k in allowed and isinstance(v, str) and v.strip():
+                setattr(project, k, v.strip()); n += 1
+        result["idea"] = n
+
+    if "personas" in data:
+        items = wb_apply.extract_personas(data["personas"] if isinstance(data.get("personas"), list) else data)[:MAX_ITEMS_PER_SECTION]
+        if replace:
+            db.query(WBPersona).filter(WBPersona.project_id == pid).delete()
+        for it in items:
+            db.add(WBPersona(project_id=pid, **it))
+        result["personas"] = len(items)
+
+    if "pains" in data:
+        items = wb_apply.extract_pains(data["pains"] if isinstance(data.get("pains"), list) else data)[:MAX_ITEMS_PER_SECTION]
+        if replace:
+            db.query(WBPainCluster).filter(WBPainCluster.project_id == pid).delete()
+        for it in items:
+            db.add(WBPainCluster(project_id=pid, source="llm", **it))
+        result["pains"] = len(items)
+
+    if "features" in data:
+        items = wb_apply.extract_features(data["features"] if isinstance(data.get("features"), list) else data)[:MAX_ITEMS_PER_SECTION]
+        if replace:
+            db.query(WBFeature).filter(WBFeature.project_id == pid).delete()
+        for it in items:
+            db.add(WBFeature(project_id=pid, **it))
+        result["features"] = len(items)
+
+    if isinstance(data.get("prfaq"), dict):
+        fields = wb_apply.extract_prfaq(data["prfaq"])
+        pf = db.query(WBPRFAQ).filter(WBPRFAQ.project_id == pid).first()
+        if pf:
+            for k, v in fields.items():
+                setattr(pf, k, v)
+        else:
+            db.add(WBPRFAQ(project_id=pid, **fields))
+        result["prfaq"] = 1
+
+    if not result:
+        raise HTTPException(status_code=400, detail="반영할 내용이 없어요. idea/personas/pains/features/prfaq 중 하나 이상이 필요합니다.")
+    return result
+
+
 @router.post("/projects/{pid}/apply-all")
 def apply_all(pid: int, body: ApplyBody, replace: bool = False,
               current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -589,64 +733,9 @@ def apply_all(pid: int, body: ApplyBody, replace: bool = False,
     """
     project = _get_project(pid, current_user, db)
     _check_version(project, body.expected_version)
-    if body.content and len(body.content.encode("utf-8")) > MAX_APPLY_BYTES:
-        raise HTTPException(status_code=413, detail="붙여넣은 내용이 너무 큽니다. JSON 부분만 붙여넣어 주세요.")
+    data = _parse_apply_content(body.content)
     try:
-        data = wb_apply.parse_json_lenient(body.content)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    if not isinstance(data, dict):
-        raise HTTPException(status_code=400, detail="객체 형태의 JSON이 필요합니다")
-
-    result = {}
-    try:
-        # idea — 빈 값이 아닌 필드만 갱신
-        idea = data.get("idea")
-        if isinstance(idea, dict):
-            allowed = {"one_liner", "current_problem", "target_user", "expected_benefit",
-                       "current_alternative", "success_criteria", "not_doing"}
-            n = 0
-            for k, v in idea.items():
-                if k in allowed and isinstance(v, str) and v.strip():
-                    setattr(project, k, v.strip()); n += 1
-            result["idea"] = n
-
-        if "personas" in data:
-            items = wb_apply.extract_personas(data["personas"] if isinstance(data.get("personas"), list) else data)[:MAX_ITEMS_PER_SECTION]
-            if replace:
-                db.query(WBPersona).filter(WBPersona.project_id == pid).delete()
-            for it in items:
-                db.add(WBPersona(project_id=pid, **it))
-            result["personas"] = len(items)
-
-        if "pains" in data:
-            items = wb_apply.extract_pains(data["pains"] if isinstance(data.get("pains"), list) else data)[:MAX_ITEMS_PER_SECTION]
-            if replace:
-                db.query(WBPainCluster).filter(WBPainCluster.project_id == pid).delete()
-            for it in items:
-                db.add(WBPainCluster(project_id=pid, source="llm", **it))
-            result["pains"] = len(items)
-
-        if "features" in data:
-            items = wb_apply.extract_features(data["features"] if isinstance(data.get("features"), list) else data)[:MAX_ITEMS_PER_SECTION]
-            if replace:
-                db.query(WBFeature).filter(WBFeature.project_id == pid).delete()
-            for it in items:
-                db.add(WBFeature(project_id=pid, **it))
-            result["features"] = len(items)
-
-        if isinstance(data.get("prfaq"), dict):
-            fields = wb_apply.extract_prfaq(data["prfaq"])
-            pf = db.query(WBPRFAQ).filter(WBPRFAQ.project_id == pid).first()
-            if pf:
-                for k, v in fields.items():
-                    setattr(pf, k, v)
-            else:
-                db.add(WBPRFAQ(project_id=pid, **fields))
-            result["prfaq"] = 1
-
-        if not result:
-            raise HTTPException(status_code=400, detail="반영할 내용이 없어요. idea/personas/pains/features/prfaq 중 하나 이상이 필요합니다.")
+        result = _apply_data_to_project(project, data, db, replace)
         _bump(project)
         db.flush()   # 커밋 전에 DB 제약 위반을 여기서 드러내 롤백 가능하게
         db.commit()
@@ -656,8 +745,51 @@ def apply_all(pid: int, body: ApplyBody, replace: bool = False,
     except Exception:
         db.rollback()
         raise HTTPException(status_code=400, detail="반영 중 오류가 발생했어요. JSON 구조를 확인해 주세요. (변경사항은 저장되지 않았습니다)")
-
     return {"applied": result}
+
+
+class InterviewStartBody(BaseModel):
+    name: str = ""
+    domain: str = "other"
+    transcript: str = ""
+
+
+@router.post("/projects/prompt/interview-new")
+def interview_prompt_new(body: InterviewStartBody,
+                         current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """프로젝트가 아직 없을 때(발굴 첫 단계) 인터뷰 전체 정리 프롬프트를 만든다."""
+    return {"prompt": wb_prompts.interview_prompt_bare(body.name, body.domain, body.transcript)}
+
+
+class CreateFromInterviewBody(BaseModel):
+    name: str
+    content: str            # AI가 돌려준 전체 JSON
+    domain: str = "other"
+
+
+@router.post("/projects/create-from-interview", response_model=WBProjectResponse)
+def create_from_interview(body: CreateFromInterviewBody,
+                          current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """인터뷰/대화 정리 JSON으로 '새 프로젝트를 만들면서' 전체를 한 번에 채운다.
+    발굴 첫 단계(프로젝트가 아직 없는 상태)에서 사용."""
+    if not body.name.strip():
+        raise HTTPException(status_code=400, detail="프로젝트 이름이 필요합니다")
+    data = _parse_apply_content(body.content)
+    project = WBProject(user_id=current_user.id, name=body.name.strip(), domain=body.domain or "other")
+    db.add(project)
+    try:
+        db.flush()   # project.id 확보
+        _apply_data_to_project(project, data, db, replace=False)
+        db.flush()
+        db.commit()
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="반영 중 오류가 발생했어요. JSON 구조를 확인해 주세요. (프로젝트가 생성되지 않았습니다)")
+    db.refresh(project)
+    return project
 
 
 # ─────────────── Export (Markdown + LLM 프롬프트) ───────────────

@@ -4,19 +4,21 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Compass, Loader2, Plus, X, ArrowRight, Trash2, Target, CheckCircle2,
-  Search, Trash, RotateCcw, ArchiveRestore,
+  Search, Trash, RotateCcw, ArchiveRestore, Mic, Copy,
 } from 'lucide-react'
 import {
-  listWBProjects, createWBProject, deleteWBProject, restoreWBProject, getWBMeta,
+  listWBProjects, createWBProject, deleteWBProject, restoreWBProject, duplicateWBProject, getWBMeta,
   type WBListParams,
 } from '../../services/api'
 import { toast } from '../../store/toastStore'
+import { InterviewBridge } from '../../components/wb/InterviewBridge'
 import type { WBProject, WBMeta } from '../../types'
 
 export default function WBProjectsPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [showForm, setShowForm] = useState(false)
+  const [interview, setInterview] = useState(false)
   const [form, setForm] = useState({ name: '', domain: 'drop_impact', one_liner: '', current_problem: '' })
 
   // 보관함/검색/필터/정렬
@@ -54,6 +56,11 @@ export default function WBProjectsPage() {
     onSuccess: () => { inval(); toast.success('영구 삭제했어요') },
     onError: () => toast.error('삭제에 실패했어요'),
   })
+  const dupMut = useMutation({
+    mutationFn: (id: number) => duplicateWBProject(id),
+    onSuccess: () => { inval(); toast.success('프로젝트를 복제했어요') },
+    onError: () => toast.error('복제에 실패했어요'),
+  })
 
   const domainName = (key: string) => meta?.domains.find((d) => d.key === key)?.name || key
   const hasFilter = !!(q || domain || status)
@@ -71,8 +78,18 @@ export default function WBProjectsPage() {
             "이 일이 정말 필요한가"를 구조적으로 확인해요.
           </p>
         </div>
-        {!trashed && <button onClick={() => setShowForm(true)} className="btn-primary"><Plus className="w-4 h-4" /> 새 프로젝트</button>}
+        {!trashed && (
+          <div className="flex gap-2">
+            <button onClick={() => setInterview(true)} className="btn-secondary"><Mic className="w-4 h-4" /> 인터뷰로 시작</button>
+            <button onClick={() => setShowForm(true)} className="btn-primary"><Plus className="w-4 h-4" /> 새 프로젝트</button>
+          </div>
+        )}
       </motion.div>
+
+      {interview && (
+        <InterviewBridge meta={meta} onClose={() => setInterview(false)}
+          onCreated={(p) => { inval(); navigate(`/wb/${p.id}`) }} />
+      )}
 
       <AnimatePresence>
         {showForm && !trashed && (
@@ -187,8 +204,12 @@ export default function WBProjectsPage() {
                         title="영구 삭제" className="text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
                     </>
                   ) : (
-                    <button onClick={(e) => { e.stopPropagation(); trashMut.mutate(p.id) }}
-                      title="보관함으로" className="text-slate-300 hover:text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-4 h-4" /></button>
+                    <>
+                      <button onClick={(e) => { e.stopPropagation(); dupMut.mutate(p.id) }} disabled={dupMut.isPending}
+                        title="복제" className="text-slate-300 hover:text-brand-500 opacity-0 group-hover:opacity-100 transition-opacity"><Copy className="w-4 h-4" /></button>
+                      <button onClick={(e) => { e.stopPropagation(); trashMut.mutate(p.id) }}
+                        title="보관함으로" className="text-slate-300 hover:text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-4 h-4" /></button>
+                    </>
                   )}
                 </div>
               </div>

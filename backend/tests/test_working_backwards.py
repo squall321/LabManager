@@ -69,6 +69,59 @@ def test_project_search_filter_sort(client, login):
     assert names == sorted(names)
 
 
+def test_create_from_interview(client, login):
+    a = login("seoyeon.lee@company.com")
+    # 프로젝트 없이 인터뷰 프롬프트 생성
+    pr = client.post("/api/wb/projects/prompt/interview-new", headers=a,
+                     json={"name": "낙하 자동화", "transcript": "매번 손으로 케이스 만듦"}).json()
+    assert "JSON" in pr["prompt"] and "매번 손으로" in pr["prompt"]
+    # 전체 JSON으로 새 프로젝트 생성 + 채우기
+    content = ('{"idea":{"one_liner":"낙하 자동화"},'
+               '"personas":[{"name":"해석자"}],"pains":[{"title":"반복"}],'
+               '"features":[{"name":"자동생성","priority":1}]}')
+    p = client.post("/api/wb/projects/create-from-interview", headers=a,
+                    json={"name": "낙하 자동화", "content": content, "domain": "drop_impact"}).json()
+    assert p["id"] and p["one_liner"] == "낙하 자동화"
+    assert len(client.get(f"/api/wb/projects/{p['id']}/personas", headers=a).json()) == 1
+    # 빈 내용이면 프로젝트가 생성되지 않음
+    bad = client.post("/api/wb/projects/create-from-interview", headers=a,
+                      json={"name": "빈", "content": "{}"})
+    assert bad.status_code == 400
+    assert not any(x["name"] == "빈" for x in client.get("/api/wb/projects", headers=a).json())
+
+
+def test_duplicate_project(client, login):
+    a = login("jiho.park@company.com")
+    pid = client.post("/api/wb/projects", headers=a, json={"name": "원본", "domain": "thermal"}).json()["id"]
+    client.post(f"/api/wb/projects/{pid}/personas", headers=a, json={"name": "P1"})
+    client.post(f"/api/wb/projects/{pid}/pains", headers=a, json={"title": "문제1"})
+    client.post(f"/api/wb/projects/{pid}/features", headers=a, json={"name": "기능1", "priority": 2})
+    client.put(f"/api/wb/projects/{pid}", headers=a, json={"status": "validated"})
+
+    dup = client.post(f"/api/wb/projects/{pid}/duplicate", headers=a).json()
+    assert dup["id"] != pid
+    assert dup["name"] == "원본 (복제)" and dup["domain"] == "thermal"
+    assert dup["status"] == "draft"   # 복제본은 초안으로 초기화
+    assert len(client.get(f"/api/wb/projects/{dup['id']}/personas", headers=a).json()) == 1
+    assert len(client.get(f"/api/wb/projects/{dup['id']}/pains", headers=a).json()) == 1
+    assert len(client.get(f"/api/wb/projects/{dup['id']}/features", headers=a).json()) == 1
+    # 원본은 그대로
+    assert client.get(f"/api/wb/projects/{pid}", headers=a).json()["status"] == "validated"
+
+
+def test_wb_stats(client, login):
+    a = login("sua.choi@company.com")
+    p1 = client.post("/api/wb/projects", headers=a, json={"name": "A"}).json()["id"]
+    client.post("/api/wb/projects", headers=a, json={"name": "B"})
+    client.put(f"/api/wb/projects/{p1}", headers=a, json={"status": "validated"})
+    s = client.get("/api/wb/stats", headers=a).json()
+    assert s["total"] == 2 and s["validated"] == 1 and s["draft"] == 1
+    assert len(s["recent"]) == 2
+    # 보관함 항목은 통계에서 제외
+    client.delete(f"/api/wb/projects/{p1}", headers=a)
+    assert client.get("/api/wb/stats", headers=a).json()["total"] == 1
+
+
 def test_living_persona_from_collab_style(client, login):
     owner = login("seoyeon.lee@company.com")
     mate = login("jiho.park@company.com")

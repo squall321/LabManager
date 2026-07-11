@@ -113,6 +113,25 @@ def create_project(name: str, one_liner: str = "", current_problem: str = "") ->
 
 
 @mcp.tool()
+def create_and_fill(name: str, content: str, domain: str = "other") -> dict:
+    """
+    인터뷰/대화 정리 내용으로 '새 프로젝트를 만들면서 전체를 한 번에' 채웁니다.
+    발굴 첫 단계(프로젝트가 아직 없을 때)에 가장 편리합니다 — create_project + fill_project 를 한 번에.
+
+    content 는 fill_project 와 동일한 JSON(idea/personas/pains/features/prfaq).
+    반영할 내용이 하나도 없으면 프로젝트가 만들어지지 않습니다(원자적).
+    """
+    if not name or not name.strip():
+        raise RuntimeError("프로젝트 이름(name)이 필요합니다.")
+    if isinstance(content, (dict, list)):
+        content = json.dumps(content, ensure_ascii=False)
+    if not content or not str(content).strip():
+        raise RuntimeError("채울 내용(content JSON)이 비어 있습니다.")
+    return _post("/wb/projects/create-from-interview",
+                 {"name": name.strip(), "content": content, "domain": domain})
+
+
+@mcp.tool()
 def get_project(project_id: int) -> dict:
     """프로젝트 하나의 전체 내용(아이디어 캔버스·페르소나·문제·PR/FAQ·기능·검증)을 한 번에 읽어옵니다. 채우기 전에 현재 상태를 파악할 때 쓰세요."""
     proj = _get(f"/wb/projects/{project_id}")

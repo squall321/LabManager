@@ -3,12 +3,17 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   ClipboardList, FileBarChart, ArrowRight, CheckCircle2, Clock, Sparkles,
-  Sprout, Target, Lightbulb, BookOpenCheck,
+  Sprout, Target, Lightbulb, BookOpenCheck, Compass, Mic,
 } from 'lucide-react'
-import { getSurveyStatus, getMyReport, getGrowth } from '../services/api'
+import { getSurveyStatus, getMyReport, getGrowth, getWBStats } from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import { BIRKMAN_COLORS } from '../lib/utils'
 import type { SurveyStatus, Report, GrowthSummary } from '../types'
+
+interface WBStats {
+  total: number; validated: number; draft: number
+  recent: { id: number; name: string; status: string; updated_at: string }[]
+}
 
 export default function DashboardPage() {
   const navigate = useNavigate()
@@ -17,6 +22,7 @@ export default function DashboardPage() {
   const { data: status } = useQuery<SurveyStatus>({ queryKey: ['survey-status'], queryFn: getSurveyStatus })
   const { data: report } = useQuery<Report>({ queryKey: ['my-report'], queryFn: getMyReport, retry: false })
   const { data: growth } = useQuery<GrowthSummary>({ queryKey: ['growth'], queryFn: getGrowth, retry: false })
+  const { data: wb } = useQuery<WBStats>({ queryKey: ['wb-stats'], queryFn: getWBStats, retry: false })
 
   const isCompleted = status?.status === 'completed'
   const hasStarted = status?.has_survey && !isCompleted
@@ -175,6 +181,69 @@ export default function DashboardPage() {
                 <span className="text-xs text-slate-400">키운 역량</span>
                 {growth.skills.slice(0, 6).map((sk) => (
                   <span key={sk} className="text-xs bg-white border border-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md">{sk}</span>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </motion.div>
+
+      {/* Working Backwards snapshot */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+        className="card bg-gradient-to-br from-brand-50/60 to-white border-brand-100"
+      >
+        <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+          <div>
+            <div className="flex items-center gap-2 text-brand-600 text-sm font-semibold mb-0.5">
+              <Compass className="w-4 h-4" /> Working Backwards
+            </div>
+            <h3 className="font-bold text-slate-900">발굴 중인 프로젝트</h3>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => navigate('/wb')} className="btn-secondary text-sm">프로젝트 목록</button>
+            <button onClick={() => navigate('/wb')} className="btn-primary text-sm"><Mic className="w-4 h-4" /> 인터뷰로 시작</button>
+          </div>
+        </div>
+
+        {!wb || wb.total === 0 ? (
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <p className="text-sm text-slate-500">
+              새 업무·소비자 아이디어를 이해관계자 관점에서 검증해보세요. 인터뷰 녹취만 있으면 AI가 한 번에 정리해줍니다.
+            </p>
+            <button onClick={() => navigate('/wb')} className="btn-secondary text-sm">
+              <Lightbulb className="w-4 h-4" /> 첫 아이디어 발굴
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: '전체 프로젝트', value: wb.total, icon: Compass, color: '#6366f1' },
+                { label: '검증 완료', value: wb.validated, icon: CheckCircle2, color: '#22c55e' },
+                { label: '진행 중(초안)', value: wb.draft, icon: Clock, color: '#f59e0b' },
+              ].map((s) => (
+                <div key={s.label} className="rounded-xl bg-white border border-slate-100 p-3">
+                  <s.icon className="w-4 h-4 mb-1.5" style={{ color: s.color }} />
+                  <div className="text-xl font-bold text-slate-900">{s.value}</div>
+                  <div className="text-[11px] text-slate-500">{s.label}</div>
+                </div>
+              ))}
+            </div>
+            {wb.recent.length > 0 && (
+              <div className="mt-4 space-y-1.5">
+                <span className="text-xs text-slate-400">최근 작업</span>
+                {wb.recent.map((p) => (
+                  <button key={p.id} onClick={() => navigate(`/wb/${p.id}`)}
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-white border border-slate-100 hover:border-brand-200 transition-colors text-left">
+                    <span className="text-sm font-medium text-slate-700 truncate">{p.name}</span>
+                    <span className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                      {p.status === 'validated'
+                        ? <span className="inline-flex items-center gap-1 text-[11px] text-green-600"><CheckCircle2 className="w-3.5 h-3.5" /> 검증</span>
+                        : <span className="text-[11px] text-slate-400">초안</span>}
+                      <ArrowRight className="w-3.5 h-3.5 text-slate-300" />
+                    </span>
+                  </button>
                 ))}
               </div>
             )}

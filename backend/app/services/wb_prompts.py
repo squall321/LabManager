@@ -109,6 +109,21 @@ def features_prompt(project, pains) -> str:
     )
 
 
+class _BareProject:
+    """프로젝트가 아직 없을 때(발굴 첫 단계) 인터뷰 프롬프트를 만들기 위한 최소 스텁."""
+    def __init__(self, name: str = "", domain: str = "other"):
+        self.name = name or "(제목 미정)"
+        self.domain = domain
+        self.one_liner = self.current_problem = self.target_user = ""
+        self.expected_benefit = self.current_alternative = ""
+        self.success_criteria = self.not_doing = ""
+
+
+def interview_prompt_bare(name: str, domain: str, transcript: str = "") -> str:
+    """프로젝트 생성 전, 이름·업무유형·녹취만으로 전체 정리 프롬프트를 만든다."""
+    return interview_prompt(_BareProject(name, domain), transcript)
+
+
 def interview_prompt(project, transcript: str = "") -> str:
     """인터뷰/대화 정리 → WB 전체를 한 번에 채우는 프롬프트.
     음성인식 등으로 얻은 대화 원문을 넣으면 AI가 전체 구조를 JSON으로 정리한다."""

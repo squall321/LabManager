@@ -137,6 +137,7 @@ export const toggleAgreementAgree = (id: number) => api.post(`/agreements/${id}/
 // Working Backwards
 export const getWBMeta = () => api.get('/wb/meta').then((r) => r.data)
 export const getPersonaCandidates = () => api.get('/wb/persona-candidates').then((r) => r.data)
+export const getWBStats = () => api.get('/wb/stats').then((r) => r.data)
 export interface WBListParams { trashed?: boolean; q?: string; domain?: string; status?: string; sort?: string }
 export const listWBProjects = (params: WBListParams = {}) =>
   api.get('/wb/projects', { params }).then((r) => r.data)
@@ -149,6 +150,7 @@ export const updateWBProject = (id: number, data: any) => api.put(`/wb/projects/
 export const deleteWBProject = (id: number, purge = false) =>
   api.delete(`/wb/projects/${id}`, { params: { purge } }).then((r) => r.data)
 export const restoreWBProject = (id: number) => api.post(`/wb/projects/${id}/restore`).then((r) => r.data)
+export const duplicateWBProject = (id: number) => api.post(`/wb/projects/${id}/duplicate`).then((r) => r.data)
 
 export const listPersonas = (pid: number) => api.get(`/wb/projects/${pid}/personas`).then((r) => r.data)
 export const addPersona = (pid: number, data: any) => api.post(`/wb/projects/${pid}/personas`, data).then((r) => r.data)
@@ -181,6 +183,11 @@ export const getInterviewPrompt = (pid: number, transcript: string) =>
   api.post(`/wb/projects/${pid}/prompt/interview`, { transcript }).then((r) => r.data)
 export const applyWBAll = (pid: number, content: string, replace = false, expectedVersion?: number) =>
   api.post(`/wb/projects/${pid}/apply-all`, { content, expected_version: expectedVersion }, { params: { replace } }).then((r) => r.data)
+// 프로젝트가 아직 없을 때(발굴 첫 단계) — 인터뷰 프롬프트 생성 + 새 프로젝트로 채우기
+export const getInterviewPromptNew = (name: string, domain: string, transcript: string) =>
+  api.post('/wb/projects/prompt/interview-new', { name, domain, transcript }).then((r) => r.data)
+export const createFromInterview = (name: string, content: string, domain = 'other') =>
+  api.post('/wb/projects/create-from-interview', { name, content, domain }).then((r) => r.data)
 
 // API tokens (for MCP / external tools)
 export const listApiTokens = () => api.get('/tokens').then((r) => r.data)

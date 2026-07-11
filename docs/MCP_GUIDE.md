@@ -127,6 +127,7 @@ Claude 는 내부적으로 이렇게 동작합니다:
 | `whoami` | 토큰 소유 계정 확인(연결 점검) |
 | `list_projects` | 내 프로젝트 목록 |
 | `create_project` | 새 프로젝트 생성 |
+| `create_and_fill` | 인터뷰 내용으로 **새 프로젝트 생성 + 전체 채우기**(발굴 첫 단계) |
 | `get_project` | 프로젝트 전체 내용 읽기 |
 | `get_fill_schema` | 한 번에 채우기용 JSON 스키마·지침(인터뷰 포함) |
 | `fill_project` | 인터뷰 내용을 프로젝트 전체에 반영 (충돌 방지: `expected_version`) |
