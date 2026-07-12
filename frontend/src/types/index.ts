@@ -238,18 +238,19 @@ export interface WBValidation {
 }
 
 export type WBMode = 'discovery' | 'simulation'
-export interface WBValidationSet {
-  items: { key: string; label: string; question: string; auto: boolean }[]
-  max: number
-}
+export interface WBValidationItem { key: string; label: string; question: string; auto: boolean; low?: string; high?: string }
+export interface WBValidationSet { items: WBValidationItem[]; max: number }
+export interface WBRolePreset { role: string; goals: string; pains: string; fears: string }
 export interface WBMeta {
   domains: { key: string; name: string; desc: string }[]
-  role_presets: { role: string; goals: string; pains: string; fears: string }[]
-  validation_items: { key: string; label: string; question: string; auto: boolean }[]
+  role_presets: WBRolePreset[]
+  validation_items: WBValidationItem[]
   validation_max: number
+  time_blocks: string[]
   modes: WBMode[]
   validation_by_mode: Record<WBMode, WBValidationSet>
-  time_blocks: string[]
+  role_presets_by_mode: Record<WBMode, WBRolePreset[]>
+  time_blocks_by_mode: Record<WBMode, string[]>
   style_persona: Record<string, { label: string; goals: string; fears: string; comm_style: string; objection: string }>
 }
 

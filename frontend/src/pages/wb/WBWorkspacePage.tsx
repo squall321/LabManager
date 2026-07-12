@@ -17,7 +17,7 @@ import { LLMBridge } from '../../components/wb/LLMBridge'
 import { InterviewBridge } from '../../components/wb/InterviewBridge'
 import { MODE_META } from '../../lib/wbMode'
 import { BIRKMAN_COLORS } from '../../lib/utils'
-import type { WBProject, WBMeta, WBPersona, PersonaCandidate, WBPain, WBPRFAQ, WBFeature, WBValidation } from '../../types'
+import type { WBProject, WBMeta, WBMode, WBPersona, PersonaCandidate, WBPain, WBPRFAQ, WBFeature, WBValidation } from '../../types'
 import { cn } from '../../lib/utils'
 
 const STEPS = [
@@ -137,8 +137,8 @@ export default function WBWorkspacePage() {
         {/* Step content */}
         <div className="min-w-0">
           {step === 'idea' && <IdeaStep project={project} meta={meta} />}
-          {step === 'persona' && <PersonaStep pid={pid} />}
-          {step === 'ditl' && <DITLStep pid={pid} meta={meta} goStep={setStep} />}
+          {step === 'persona' && <PersonaStep pid={pid} mode={project.mode} />}
+          {step === 'ditl' && <DITLStep pid={pid} meta={meta} mode={project.mode} goStep={setStep} />}
           {step === 'pain' && <PainStep pid={pid} />}
           {step === 'prfaq' && <PRFAQStep pid={pid} />}
           {step === 'feature' && <FeatureStep pid={pid} />}
@@ -229,13 +229,14 @@ function IdeaStep({ project, meta }: { project: WBProject; meta: WBMeta }) {
 }
 
 // ── Step 2: Persona ──
-function PersonaStep({ pid }: { pid: number }) {
+function PersonaStep({ pid, mode }: { pid: number; mode: string }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [bridge, setBridge] = useState(false)
   const { data: personas } = useQuery<WBPersona[]>({ queryKey: ['wb-personas', pid], queryFn: () => api.listPersonas(pid) })
   const { data: candidates } = useQuery<PersonaCandidate[]>({ queryKey: ['wb-candidates'], queryFn: api.getPersonaCandidates })
   const { data: meta } = useQuery<WBMeta>({ queryKey: ['wb-meta'], queryFn: getWBMeta })
+  const rolePresets = meta?.role_presets_by_mode?.[mode as WBMode] || meta?.role_presets || []
   const inval = () => queryClient.invalidateQueries({ queryKey: ['wb-personas', pid] })
 
   const addPreset = useMutation({
@@ -293,7 +294,7 @@ function PersonaStep({ pid }: { pid: number }) {
           <h3 className="font-semibold text-slate-700 mb-1 text-sm">역할 프리셋으로 빠르게 추가</h3>
           <p className="text-xs text-slate-400 mb-3">전형적인 이해관계자를 관심사·두려움과 함께 한 번에 추가해요.</p>
           <div className="flex flex-wrap gap-2">
-            {meta.role_presets.map((r) => (
+            {rolePresets.map((r) => (
               <button key={r.role} onClick={() => addPreset.mutate(r)} disabled={addPreset.isPending}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 hover:border-brand-300 text-sm transition-all">
                 <Plus className="w-3.5 h-3.5 text-slate-400" /> {r.role}
@@ -350,19 +351,21 @@ function PersonaCard({ pid, persona, onDelete, onChange }: { pid: number; person
 }
 
 // ── Step 3: Day in the Life ──
-function DITLStep({ pid, meta, goStep }: { pid: number; meta: WBMeta; goStep: (s: string) => void }) {
+function DITLStep({ pid, meta, mode, goStep }: { pid: number; meta: WBMeta; mode: string; goStep: (s: string) => void }) {
   const { data: personas } = useQuery<WBPersona[]>({ queryKey: ['wb-personas', pid], queryFn: () => api.listPersonas(pid) })
+  const isSim = mode === 'simulation'
+  const timeBlocks = meta.time_blocks_by_mode?.[mode as WBMode] || meta.time_blocks
   if (!personas || personas.length === 0) return (
     <div className="card text-center py-10">
       <Users2 className="w-9 h-9 text-slate-300 mx-auto mb-2" />
-      <p className="text-sm text-slate-500 mb-3">하루 시나리오는 페르소나별로 만들어요. 먼저 페르소나를 추가하세요.</p>
+      <p className="text-sm text-slate-500 mb-3">{isSim ? '해석 파이프라인은 이해관계자별로 정리해요. 먼저 페르소나를 추가하세요.' : '하루 시나리오는 페르소나별로 만들어요. 먼저 페르소나를 추가하세요.'}</p>
       <button onClick={() => goStep('persona')} className="btn-secondary text-sm"><ArrowLeft className="w-4 h-4" /> 페르소나 단계로</button>
     </div>
   )
-  return <div className="space-y-4">{personas.map((p) => <DITLCard key={p.id} pid={pid} persona={p} timeBlocks={meta.time_blocks} />)}</div>
+  return <div className="space-y-4">{personas.map((p) => <DITLCard key={p.id} pid={pid} persona={p} timeBlocks={timeBlocks} isSim={isSim} />)}</div>
 }
 
-function DITLCard({ pid, persona, timeBlocks }: { pid: number; persona: WBPersona; timeBlocks: string[] }) {
+function DITLCard({ pid, persona, timeBlocks, isSim }: { pid: number; persona: WBPersona; timeBlocks: string[]; isSim: boolean }) {
   const queryClient = useQueryClient()
   const [bridge, setBridge] = useState(false)
   const [rows, setRows] = useState(persona.scenarios.length ? persona.scenarios.map((s) => ({ ...s })) : timeBlocks.map((t, i) => ({ time_block: t, activity: '', pain_point: '', opportunity: '', order: i })))
@@ -377,18 +380,18 @@ function DITLCard({ pid, persona, timeBlocks }: { pid: number; persona: WBPerson
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold text-slate-900 flex items-center gap-2">
           {persona.style_code && <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: BIRKMAN_COLORS[persona.style_code]?.hex }} />}
-          {persona.name}의 하루
+          {isSim ? `${persona.name} 관점의 해석 파이프라인` : `${persona.name}의 하루`}
         </h3>
         <button onClick={() => setBridge(true)} className="btn-secondary !py-1.5 text-xs"><Wand2 className="w-3.5 h-3.5" /> AI로 채우기</button>
       </div>
-      {bridge && <LLMBridge pid={pid} step="ditl" personaId={persona.id} title={`${persona.name}의 하루 시나리오`}
+      {bridge && <LLMBridge pid={pid} step="ditl" personaId={persona.id} title={isSim ? `${persona.name} 관점의 해석 단계` : `${persona.name}의 하루 시나리오`}
         onClose={() => setBridge(false)} onApplied={() => queryClient.invalidateQueries({ queryKey: ['wb-personas', pid] })} />}
       <div className="space-y-2">
         {rows.map((r, i) => (
-          <div key={i} className="grid grid-cols-[70px_1fr_1fr] gap-2 items-center">
+          <div key={i} className="grid grid-cols-[110px_1fr_1fr] gap-2 items-center">
             <span className="text-xs font-medium text-slate-500">{r.time_block}</span>
-            <input className="input-field !py-2 text-sm" value={r.activity} onChange={(e) => setRow(i, 'activity', e.target.value)} placeholder="하는 일" />
-            <input className="input-field !py-2 text-sm" value={r.pain_point} onChange={(e) => setRow(i, 'pain_point', e.target.value)} placeholder="문제/불편" />
+            <input className="input-field !py-2 text-sm" value={r.activity} onChange={(e) => setRow(i, 'activity', e.target.value)} placeholder={isSim ? '이 단계에서 하는 일' : '하는 일'} />
+            <input className="input-field !py-2 text-sm" value={r.pain_point} onChange={(e) => setRow(i, 'pain_point', e.target.value)} placeholder={isSim ? '불확실성/리스크' : '문제/불편'} />
           </div>
         ))}
       </div>
@@ -657,6 +660,12 @@ function ValidationStep({ pid, meta, mode }: { pid: number; meta: WBMeta; mode: 
                     (scores[item.key] || 0) >= n ? 'bg-brand-500 text-white' : 'bg-slate-100 text-slate-400 hover:bg-slate-200')}>{n}</button>
               ))}
             </div>
+            {(item.low || item.high) && (
+              <div className="flex justify-between text-[10px] text-slate-400 mt-1 px-0.5">
+                <span>1 · {item.low}</span>
+                <span>{item.high} · 5</span>
+              </div>
+            )}
           </div>
         ))}
       </div>

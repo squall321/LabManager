@@ -104,6 +104,31 @@ def test_mode_defaults_to_discovery(client, login):
     assert p["mode"] == "discovery"
 
 
+def test_meta_mode_content(client, login):
+    a = login("seoyeon.lee@company.com")
+    m = client.get("/api/wb/meta", headers=a).json()
+    # 검증 항목에 rubric(low/high) 포함
+    assert all("low" in i and "high" in i for i in m["validation_by_mode"]["discovery"]["items"])
+    assert all("low" in i and "high" in i for i in m["validation_by_mode"]["simulation"]["items"])
+    # 모드별 역할 프리셋·시간블록
+    sim_roles = [r["role"] for r in m["role_presets_by_mode"]["simulation"]]
+    assert "설계자" in sim_roles and "신뢰성 담당" in sim_roles
+    assert m["time_blocks_by_mode"]["simulation"][0] == "문제 정의"
+    assert m["time_blocks_by_mode"]["discovery"][0] == "오전"
+
+
+def test_simulation_template_prfaq(client, login):
+    a = login("jiho.park@company.com")
+    pid = client.post("/api/wb/projects", headers=a,
+                      json={"name": "힌지 낙하 해석", "mode": "simulation"}).json()["id"]
+    client.post(f"/api/wb/projects/{pid}/personas", headers=a, json={"name": "설계자", "role": "설계자"})
+    # 템플릿 PR/FAQ 초안이 시뮬레이션 문구로 생성됨
+    pf = client.post(f"/api/wb/projects/{pid}/generate/prfaq-skeleton", headers=a).json()
+    joined = " ".join([qa["q"] for qa in (pf.get("faq") or [])] + [qa["q"] for qa in (pf.get("risks") or [])])
+    assert "물리현상" in joined or "시험" in joined  # 시뮬레이션 관점 질문
+    assert "MVP" not in joined  # 발굴용 문구가 아님
+
+
 def test_create_from_interview(client, login):
     a = login("seoyeon.lee@company.com")
     # 프로젝트 없이 인터뷰 프롬프트 생성
