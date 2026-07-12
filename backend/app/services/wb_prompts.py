@@ -111,42 +111,67 @@ def features_prompt(project, pains) -> str:
 
 class _BareProject:
     """프로젝트가 아직 없을 때(발굴 첫 단계) 인터뷰 프롬프트를 만들기 위한 최소 스텁."""
-    def __init__(self, name: str = "", domain: str = "other"):
+    def __init__(self, name: str = "", domain: str = "other", mode: str = "discovery"):
         self.name = name or "(제목 미정)"
         self.domain = domain
+        self.mode = mode
         self.one_liner = self.current_problem = self.target_user = ""
         self.expected_benefit = self.current_alternative = ""
         self.success_criteria = self.not_doing = ""
 
 
-def interview_prompt_bare(name: str, domain: str, transcript: str = "") -> str:
+def interview_prompt_bare(name: str, domain: str, transcript: str = "", mode: str = "discovery") -> str:
     """프로젝트 생성 전, 이름·업무유형·녹취만으로 전체 정리 프롬프트를 만든다."""
-    return interview_prompt(_BareProject(name, domain), transcript)
+    return interview_prompt(_BareProject(name, domain, mode), transcript)
+
+
+# 공통 JSON 스키마 (idea/personas/pains/features/prfaq) — 두 모드 모두 같은 계약을 쓴다.
+_INTERVIEW_SCHEMA = (
+    "아래 스키마의 JSON '하나만' 출력하세요. 각 배열은 비어 있어도 됩니다.\n"
+    '{\n'
+    '  "idea": { "one_liner": "", "current_problem": "", "target_user": "", '
+    '"expected_benefit": "", "current_alternative": "", "success_criteria": "", "not_doing": "" },\n'
+    '  "personas": [ { "name": "", "role": "", "goals": "", "pains": "", "fears": "" } ],\n'
+    '  "pains": [ { "title": "", "description": "" } ],\n'
+    '  "features": [ { "name": "", "priority": 1, "reason": "" } ],\n'
+    '  "prfaq": { "headline": "", "subtitle": "", "customer_problem": "", "opportunity": "", '
+    '"solution": "", "cta": "", "faq": [ {"q":"","a":""} ], "risks": [ {"q":"","a":""} ] }\n'
+    '}'
+)
 
 
 def interview_prompt(project, transcript: str = "") -> str:
     """인터뷰/대화 정리 → WB 전체를 한 번에 채우는 프롬프트.
-    음성인식 등으로 얻은 대화 원문을 넣으면 AI가 전체 구조를 JSON으로 정리한다."""
+    프로젝트 mode 에 따라 '기회 발굴' 또는 '시뮬레이션 계획' 관점으로 정리하게 한다."""
     base = _project_context(project)
     src = ("아래 인터뷰/대화 내용을 근거로 정리하세요. 내용에 없는 사실은 지어내지 말고 빈 값으로 두세요.\n\n"
            "## 인터뷰/대화 원문\n" + transcript.strip() + "\n") if transcript.strip() else \
-          "아래 아이디어 맥락을 바탕으로 합리적으로 구성하세요.\n"
-    return (
-        "당신은 Amazon Working Backwards 퍼실리테이터입니다. "
-        "아이디어를 이해관계자 관점에서 검증할 수 있도록 전체 구조를 한 번에 정리하세요.\n\n"
-        + base + "\n\n" + src + "\n"
-        + _COMMON_RULES +
-        "아래 스키마의 JSON '하나만' 출력하세요. 각 배열은 비어 있어도 됩니다.\n"
-        '{\n'
-        '  "idea": { "one_liner": "", "current_problem": "", "target_user": "", '
-        '"expected_benefit": "", "current_alternative": "", "success_criteria": "", "not_doing": "" },\n'
-        '  "personas": [ { "name": "", "role": "", "goals": "", "pains": "", "fears": "" } ],\n'
-        '  "pains": [ { "title": "", "description": "" } ],\n'
-        '  "features": [ { "name": "", "priority": 1, "reason": "" } ],\n'
-        '  "prfaq": { "headline": "", "subtitle": "", "customer_problem": "", "opportunity": "", '
-        '"solution": "", "cta": "", "faq": [ {"q":"","a":""} ], "risks": [ {"q":"","a":""} ] }\n'
-        '}'
-    )
+          "아래 맥락을 바탕으로 합리적으로 구성하세요.\n"
+
+    mode = getattr(project, "mode", "discovery")
+    if mode == "simulation":
+        intro = (
+            "당신은 CAE/시뮬레이션 계획 퍼실리테이터입니다. "
+            "새 제품 컨셉 또는 발생한 문제를 '어떻게 해석(시뮬레이션)할지' 계획을 한 번에 정리하세요.\n"
+            "필드는 시뮬레이션 계획의 렌즈로 해석하세요:\n"
+            "- idea.current_problem: 해석으로 답하려는 질문(어떤 파손/현상/성능을 확인하나)\n"
+            "- idea.target_user: 이 해석 결과를 쓰고 판단할 사람(설계·신뢰성·의사결정)\n"
+            "- idea.expected_benefit: 이 해석으로 얻는 결정/근거\n"
+            "- idea.current_alternative: 지금까지의 방식(시험 의존, 경험적 판단 등)\n"
+            "- idea.success_criteria: 합/불 또는 비교의 판단 기준\n"
+            "- personas: 이 결과를 신뢰해야 하는 이해관계자(각자의 관심사·반론)\n"
+            "- pains: 해석을 어렵게 하는 불확실성(경계조건·재료물성·단순화 가정 등)\n"
+            "- features: 해석 계획의 구성요소(지배 물리현상, 해석방법/솔버, 하중·경계조건, "
+            "메시/재료모델, 시험 상관, 판단기준). priority 는 착수 순서.\n"
+            "- prfaq.risks: '이 해석 결과를 왜 믿나?'에 대한 예상 반론과 대응(검증 계획).\n\n"
+        )
+    else:
+        intro = (
+            "당신은 Amazon Working Backwards 퍼실리테이터입니다. "
+            "아이디어를 이해관계자 관점에서 검증할 수 있도록 전체 구조를 한 번에 정리하세요.\n\n"
+        )
+
+    return intro + base + "\n\n" + src + "\n" + _COMMON_RULES + _INTERVIEW_SCHEMA
 
 
 # 붙여넣기 파싱이 기대하는 최상위 키

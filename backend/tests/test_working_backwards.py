@@ -69,6 +69,41 @@ def test_project_search_filter_sort(client, login):
     assert names == sorted(names)
 
 
+def test_simulation_mode_validation_and_prompt(client, login):
+    a = login("seoyeon.lee@company.com")
+    # meta 가 두 모드의 검증 항목을 노출
+    meta = client.get("/api/wb/meta", headers=a).json()
+    assert set(meta["modes"]) == {"discovery", "simulation"}
+    sim_items = meta["validation_by_mode"]["simulation"]["items"]
+    assert any(i["key"] == "dominant_physics" for i in sim_items)
+
+    # 시뮬레이션 모드 프로젝트 생성
+    p = client.post("/api/wb/projects", headers=a,
+                    json={"name": "낙하 해석 계획", "mode": "simulation", "domain": "drop_impact"}).json()
+    assert p["mode"] == "simulation"
+
+    # 인터뷰 프롬프트가 시뮬레이션 관점으로 나옴
+    pr = client.post(f"/api/wb/projects/{p['id']}/prompt/interview", headers=a,
+                     json={"transcript": "신규 힌지 낙하 파손"}).json()["prompt"]
+    assert "시뮬레이션" in pr and "지배 물리현상" in pr
+
+    # 시뮬레이션 검증 항목으로 점수 저장 → 그 키만 반영
+    scores = {i["key"]: 4 for i in sim_items}
+    v = client.put(f"/api/wb/projects/{p['id']}/validation", headers=a,
+                   json={"scores": scores, "note": ""}).json()
+    assert v["total"] == 4 * len(sim_items)   # 8*4 = 32
+    # 발굴 전용 키는 무시됨
+    v2 = client.put(f"/api/wb/projects/{p['id']}/validation", headers=a,
+                    json={"scores": {"repeatability": 5, "dominant_physics": 3}, "note": ""}).json()
+    assert v2["total"] == 3   # dominant_physics만 인정
+
+
+def test_mode_defaults_to_discovery(client, login):
+    a = login("jiho.park@company.com")
+    p = client.post("/api/wb/projects", headers=a, json={"name": "기본"}).json()
+    assert p["mode"] == "discovery"
+
+
 def test_create_from_interview(client, login):
     a = login("seoyeon.lee@company.com")
     # 프로젝트 없이 인터뷰 프롬프트 생성

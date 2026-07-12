@@ -184,10 +184,10 @@ export const getInterviewPrompt = (pid: number, transcript: string) =>
 export const applyWBAll = (pid: number, content: string, replace = false, expectedVersion?: number) =>
   api.post(`/wb/projects/${pid}/apply-all`, { content, expected_version: expectedVersion }, { params: { replace } }).then((r) => r.data)
 // 프로젝트가 아직 없을 때(발굴 첫 단계) — 인터뷰 프롬프트 생성 + 새 프로젝트로 채우기
-export const getInterviewPromptNew = (name: string, domain: string, transcript: string) =>
-  api.post('/wb/projects/prompt/interview-new', { name, domain, transcript }).then((r) => r.data)
-export const createFromInterview = (name: string, content: string, domain = 'other') =>
-  api.post('/wb/projects/create-from-interview', { name, content, domain }).then((r) => r.data)
+export const getInterviewPromptNew = (name: string, domain: string, transcript: string, mode = 'discovery') =>
+  api.post('/wb/projects/prompt/interview-new', { name, domain, transcript, mode }).then((r) => r.data)
+export const createFromInterview = (name: string, content: string, domain = 'other', mode = 'discovery') =>
+  api.post('/wb/projects/create-from-interview', { name, content, domain, mode }).then((r) => r.data)
 
 // API tokens (for MCP / external tools)
 export const listApiTokens = () => api.get('/tokens').then((r) => r.data)

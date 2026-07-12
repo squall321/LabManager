@@ -6,6 +6,7 @@ from datetime import datetime
 # ── Project ──
 class WBProjectBase(BaseModel):
     name: str
+    mode: str = "discovery"   # discovery | simulation
     domain: str = "other"
     one_liner: str = ""
     current_problem: str = ""
@@ -24,6 +25,7 @@ class WBProjectCreate(WBProjectBase):
 
 class WBProjectUpdate(BaseModel):
     name: Optional[str] = None
+    mode: Optional[str] = None
     domain: Optional[str] = None
     one_liner: Optional[str] = None
     current_problem: Optional[str] = None

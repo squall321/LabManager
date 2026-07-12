@@ -15,6 +15,7 @@ import { getWBMeta } from '../../services/api'
 import { toast } from '../../store/toastStore'
 import { LLMBridge } from '../../components/wb/LLMBridge'
 import { InterviewBridge } from '../../components/wb/InterviewBridge'
+import { MODE_META } from '../../lib/wbMode'
 import { BIRKMAN_COLORS } from '../../lib/utils'
 import type { WBProject, WBMeta, WBPersona, PersonaCandidate, WBPain, WBPRFAQ, WBFeature, WBValidation } from '../../types'
 import { cn } from '../../lib/utils'
@@ -72,7 +73,12 @@ export default function WBWorkspacePage() {
       <button onClick={() => navigate('/wb')} className="btn-ghost -ml-2"><ArrowLeft className="w-4 h-4" /> 프로젝트 목록</button>
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-brand-600 text-sm font-semibold mb-1"><Compass className="w-4 h-4" /> Working Backwards</div>
+          <div className="flex items-center gap-2 text-brand-600 text-sm font-semibold mb-1">
+            <Compass className="w-4 h-4" /> Working Backwards
+            <span className={cn('text-[11px] font-semibold px-2 py-0.5 rounded-full', MODE_META[project.mode]?.badge || MODE_META.discovery.badge)}>
+              {MODE_META[project.mode]?.label || '기회 발굴'}
+            </span>
+          </div>
           <h1 className="text-2xl font-bold text-slate-900">{project.name}</h1>
           {project.one_liner && <p className="text-slate-500 mt-0.5">{project.one_liner}</p>}
         </div>
@@ -136,7 +142,7 @@ export default function WBWorkspacePage() {
           {step === 'pain' && <PainStep pid={pid} />}
           {step === 'prfaq' && <PRFAQStep pid={pid} />}
           {step === 'feature' && <FeatureStep pid={pid} />}
-          {step === 'validation' && <ValidationStep pid={pid} meta={meta} />}
+          {step === 'validation' && <ValidationStep pid={pid} meta={meta} mode={project.mode} />}
           {step === 'report' && <ReportStep pid={pid} name={project.name} status={project.status} />}
 
           {/* 단계 이동 푸터 */}
@@ -582,36 +588,45 @@ function FeatureStep({ pid }: { pid: number }) {
 }
 
 // ── Step 7: Validation & MVP ──
-function liveVerdict(total: number, max: number): string {
+function liveVerdict(total: number, max: number, mode: string): string {
   const r = max ? total / max : 0
+  if (total === 0) return '항목을 평가해 총점을 매겨보세요.'
+  if (mode === 'simulation') {
+    if (r >= 0.75) return '해석 계획이 탄탄해요. 이대로 착수하되 시험 상관성 검증을 계획에 포함하세요.'
+    if (r >= 0.5) return '방향은 맞으나 경계조건·가정·판단기준을 더 다듬어야 해요.'
+    return '아직 계획이 약해요. 지배 물리현상과 해석방법부터 명확히 하세요.'
+  }
   if (r >= 0.75) return '자동화/시스템으로 만들 가치가 높아요. 단, 1차 MVP는 작게 시작하세요.'
   if (r >= 0.5) return '가치가 있으나 범위를 좁혀 검증부터 하는 게 좋아요.'
-  if (total === 0) return '항목을 평가해 총점을 매겨보세요.'
   return '아직 근거가 약해요. 문제 정의와 이해관계자를 더 확인하세요.'
 }
 
-function ValidationStep({ pid, meta }: { pid: number; meta: WBMeta }) {
+function ValidationStep({ pid, meta, mode }: { pid: number; meta: WBMeta; mode: string }) {
   const queryClient = useQueryClient()
+  const vset = meta.validation_by_mode?.[mode as 'discovery' | 'simulation'] || { items: meta.validation_items, max: meta.validation_max }
+  const items = vset.items
+  const vmax = vset.max
+  const isSim = mode === 'simulation'
   const { data } = useQuery<WBValidation | null>({ queryKey: ['wb-validation', pid], queryFn: () => api.getValidation(pid).catch(() => null), retry: false })
   const { data: hints } = useQuery<any>({ queryKey: ['wb-hints', pid], queryFn: () => api.getValidationHints(pid) })
   const [scores, setScores] = useState<Record<string, number>>({})
   useEffect(() => { if (data?.scores) setScores(data.scores) }, [data])
   const save = useMutation({
     mutationFn: () => api.saveValidation(pid, { scores, note: data?.note || '' }),
-    onSuccess: (v) => { queryClient.invalidateQueries({ queryKey: ['wb-validation', pid] }); setScores(v.scores); toast.success(`총점 ${v.total}/${meta.validation_max}`) },
+    onSuccess: (v) => { queryClient.invalidateQueries({ queryKey: ['wb-validation', pid] }); setScores(v.scores); toast.success(`총점 ${v.total}/${vmax}`) },
     onError: () => toast.error('저장 실패'),
   })
   const total = Object.values(scores).reduce((a, b) => a + b, 0)
   const applyHint = (key: string) => hints?.[key] != null && setScores((s) => ({ ...s, [key]: hints[key] }))
-  const radarData = meta.validation_items.map((it) => ({ item: it.label, score: scores[it.key] || 0 }))
-  const ratio = total / meta.validation_max
+  const radarData = items.map((it) => ({ item: it.label, score: scores[it.key] || 0 }))
+  const ratio = total / vmax
   return (
     <div className="card space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="section-title">검증 점수 & MVP</h2>
+        <h2 className="section-title">{isSim ? '해석 계획 검증' : '검증 점수 & MVP'}</h2>
         <div className="text-right">
           <span className={cn('text-2xl font-bold', ratio >= 0.75 ? 'text-green-600' : ratio >= 0.5 ? 'text-amber-500' : 'text-slate-600')}>{total}</span>
-          <span className="text-slate-400 text-sm"> / {meta.validation_max}</span>
+          <span className="text-slate-400 text-sm"> / {vmax}</span>
         </div>
       </div>
       {total > 0 && (
@@ -624,7 +639,7 @@ function ValidationStep({ pid, meta }: { pid: number; meta: WBMeta }) {
         </ResponsiveContainer>
       )}
       <div className="space-y-3">
-        {meta.validation_items.map((item) => (
+        {items.map((item) => (
           <div key={item.key}>
             <div className="flex items-center justify-between mb-1">
               <span className="text-sm text-slate-700">{item.label} <span className="text-xs text-slate-400">· {item.question}</span></span>
@@ -645,7 +660,7 @@ function ValidationStep({ pid, meta }: { pid: number; meta: WBMeta }) {
           </div>
         ))}
       </div>
-      {total > 0 && <div className={cn('rounded-xl p-3.5 text-sm border', ratio >= 0.75 ? 'bg-green-50 border-green-100 text-green-800' : ratio >= 0.5 ? 'bg-amber-50 border-amber-100 text-amber-800' : 'bg-slate-50 border-slate-100 text-slate-600')}>{liveVerdict(total, meta.validation_max)}</div>}
+      {total > 0 && <div className={cn('rounded-xl p-3.5 text-sm border', ratio >= 0.75 ? 'bg-green-50 border-green-100 text-green-800' : ratio >= 0.5 ? 'bg-amber-50 border-amber-100 text-amber-800' : 'bg-slate-50 border-slate-100 text-slate-600')}>{liveVerdict(total, vmax, mode)}</div>}
       <div className="flex justify-end"><button onClick={() => save.mutate()} disabled={save.isPending} className="btn-primary">{save.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : '판정 저장'}</button></div>
     </div>
   )

@@ -140,6 +140,7 @@ export interface WBProject {
   id: number
   user_id: number
   name: string
+  mode: WBMode
   domain: string
   one_liner: string
   current_problem: string
@@ -236,11 +237,18 @@ export interface WBValidation {
   note: string
 }
 
+export type WBMode = 'discovery' | 'simulation'
+export interface WBValidationSet {
+  items: { key: string; label: string; question: string; auto: boolean }[]
+  max: number
+}
 export interface WBMeta {
   domains: { key: string; name: string; desc: string }[]
   role_presets: { role: string; goals: string; pains: string; fears: string }[]
   validation_items: { key: string; label: string; question: string; auto: boolean }[]
   validation_max: number
+  modes: WBMode[]
+  validation_by_mode: Record<WBMode, WBValidationSet>
   time_blocks: string[]
   style_persona: Record<string, { label: string; goals: string; fears: string; comm_style: string; objection: string }>
 }

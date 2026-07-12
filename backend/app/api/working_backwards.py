@@ -200,7 +200,7 @@ def duplicate_project(pid: int, current_user: User = Depends(get_current_user), 
         "current_alternative", "success_criteria", "not_doing", "visibility",
     }
     dup = WBProject(
-        user_id=current_user.id, name=f"{src.name} (복제)", status="draft",
+        user_id=current_user.id, name=f"{src.name} (복제)", status="draft", mode=src.mode,
         **{f: getattr(src, f) for f in idea_fields},
     )
     db.add(dup)
@@ -467,11 +467,13 @@ def get_validation(pid: int, current_user: User = Depends(get_current_user), db:
 
 @router.put("/projects/{pid}/validation", response_model=WBValidationResponse)
 def upsert_validation(pid: int, data: WBValidationIn, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    _bump(_get_project(pid, current_user, db))
-    valid_keys = {i["key"] for i in wb_data.VALIDATION_ITEMS}
+    project = _get_project(pid, current_user, db)
+    _bump(project)
+    mode = project.mode or "discovery"
+    valid_keys = {i["key"] for i in wb_data.validation_items_for(mode)}
     scores = {k: max(1, min(5, int(v))) for k, v in data.scores.items() if k in valid_keys}
     total = sum(scores.values())
-    verdict = wb_data.verdict_for(total)
+    verdict = wb_data.verdict_for(total, mode)
     v = db.query(WBValidation).filter(WBValidation.project_id == pid).first()
     if v:
         v.scores, v.total, v.verdict, v.note = scores, total, verdict, data.note
@@ -485,17 +487,25 @@ def upsert_validation(pid: int, data: WBValidationIn, current_user: User = Depen
 
 @router.get("/projects/{pid}/validation/hints")
 def validation_hints(pid: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """데이터 기반 자동 힌트 (반복성/이해관계자 수/데이터 축적 가치)."""
-    _get_project(pid, current_user, db)
+    """데이터 기반 자동 힌트. 모드에 맞는 auto 항목만 채운다."""
+    project = _get_project(pid, current_user, db)
     persona_n = db.query(func.count(WBPersona.id)).filter(WBPersona.project_id == pid).scalar() or 0
     pain_n = db.query(func.count(WBPainCluster.id)).filter(WBPainCluster.project_id == pid).scalar() or 0
     feature_n = db.query(func.count(WBFeature.id)).filter(WBFeature.project_id == pid).scalar() or 0
-    # 회고 트렌드(최근 4주) 최대 기여자 수 → 반복성 힌트
+    to5 = lambda n: max(1, min(5, n))
+
+    if (project.mode or "discovery") == "simulation":
+        # 시뮬레이션: 계획 구성요소(기능)가 쌓일수록 재사용성 근거가 커진다
+        return {
+            "reusability": to5(feature_n),
+            "explain": {"reusability": f"정의된 해석 계획 요소 {feature_n}개"},
+        }
+
+    # 발굴: 회고 트렌드(최근 4주) 최대 기여자 수 → 반복성 힌트
     weeks = recent_weeks(4)
     max_contrib = db.query(func.count(func.distinct(CollabReflection.user_id))).filter(
         CollabReflection.week.in_(weeks), CollabReflection.friction_type != "원활했음"
     ).scalar() or 0
-    to5 = lambda n: max(1, min(5, n))
     return {
         "stakeholders": to5(persona_n),          # 이해관계자 수
         "repeatability": to5(max_contrib),        # 반복성(회고 기여자)
@@ -751,6 +761,7 @@ def apply_all(pid: int, body: ApplyBody, replace: bool = False,
 class InterviewStartBody(BaseModel):
     name: str = ""
     domain: str = "other"
+    mode: str = "discovery"
     transcript: str = ""
 
 
@@ -758,13 +769,14 @@ class InterviewStartBody(BaseModel):
 def interview_prompt_new(body: InterviewStartBody,
                          current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """프로젝트가 아직 없을 때(발굴 첫 단계) 인터뷰 전체 정리 프롬프트를 만든다."""
-    return {"prompt": wb_prompts.interview_prompt_bare(body.name, body.domain, body.transcript)}
+    return {"prompt": wb_prompts.interview_prompt_bare(body.name, body.domain, body.transcript, body.mode)}
 
 
 class CreateFromInterviewBody(BaseModel):
     name: str
     content: str            # AI가 돌려준 전체 JSON
     domain: str = "other"
+    mode: str = "discovery"
 
 
 @router.post("/projects/create-from-interview", response_model=WBProjectResponse)
@@ -774,8 +786,9 @@ def create_from_interview(body: CreateFromInterviewBody,
     발굴 첫 단계(프로젝트가 아직 없는 상태)에서 사용."""
     if not body.name.strip():
         raise HTTPException(status_code=400, detail="프로젝트 이름이 필요합니다")
+    mode = body.mode if body.mode in wb_data.MODES else "discovery"
     data = _parse_apply_content(body.content)
-    project = WBProject(user_id=current_user.id, name=body.name.strip(), domain=body.domain or "other")
+    project = WBProject(user_id=current_user.id, name=body.name.strip(), mode=mode, domain=body.domain or "other")
     db.add(project)
     try:
         db.flush()   # project.id 확보

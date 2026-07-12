@@ -11,6 +11,8 @@ class WBProject(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     name = Column(String, nullable=False)
+    # 프로젝트 렌즈: discovery(기회 발굴) | simulation(시뮬레이션 계획)
+    mode = Column(String, nullable=False, default="discovery")
     domain = Column(String, default="other")
     one_liner = Column(Text, default="")
     current_problem = Column(Text, default="")

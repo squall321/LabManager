@@ -89,7 +89,14 @@ STYLE_PERSONA: Dict[str, Dict] = {
     },
 }
 
-# ── 검증 점수 8항목 (원문 §9.7) ──
+# ── 프로젝트 모드 ──
+#   discovery  = 기회 발굴("무엇을 만들까" — 자동화/시스템 가치 판단)
+#   simulation = 시뮬레이션 계획("이 문제/컨셉을 어떻게 해석할까")
+MODES = ["discovery", "simulation"]
+DEFAULT_MODE = "discovery"
+
+
+# ── 검증 점수 8항목 (기회 발굴, 원문 §9.7) ──
 VALIDATION_ITEMS: List[Dict] = [
     {"key": "repeatability", "label": "반복성", "question": "같은 유형의 일이 자주 반복되는가?", "auto": True},
     {"key": "severity", "label": "문제 심각도", "question": "해결하지 않으면 일정/품질에 영향이 큰가?", "auto": False},
@@ -100,11 +107,40 @@ VALIDATION_ITEMS: List[Dict] = [
     {"key": "roi", "label": "ROI 설명 가능성", "question": "시간/비용/품질 효과를 설명할 수 있는가?", "auto": False},
     {"key": "buildability", "label": "개발 난이도", "question": "MVP를 작게 만들 수 있는가?", "auto": False},
 ]
-VALIDATION_MAX = len(VALIDATION_ITEMS) * 5  # 40
+
+# ── 검증 점수 8항목 (시뮬레이션 계획) ──
+#   "이 문제/컨셉을 어떻게 해석할지"가 타당한지 판단한다.
+SIMULATION_VALIDATION_ITEMS: List[Dict] = [
+    {"key": "dominant_physics", "label": "지배 물리현상 명확성", "question": "무엇이 지배하는가(구조/열/충격/피로 등)가 특정되었는가?", "auto": False},
+    {"key": "method_fit", "label": "해석방법 적합성", "question": "정적/동적·명시적/암시적·재료모델 선택이 문제에 맞는가?", "auto": False},
+    {"key": "boundary_confidence", "label": "경계·하중 조건 신뢰도", "question": "실제 사용/시험 조건을 반영하는가?", "auto": False},
+    {"key": "test_correlation", "label": "시험 상관성 확보 가능성", "question": "결과를 시험으로 검증·보정할 수 있는가?", "auto": False},
+    {"key": "simplification", "label": "모델 단순화 타당성", "question": "가정·단순화가 결론을 왜곡하지 않는가?", "auto": False},
+    {"key": "compute_cost", "label": "계산비용 타당성", "question": "필요한 정밀도를 현실적 리소스로 얻는가?", "auto": False},
+    {"key": "pass_criteria", "label": "판단기준 명확성", "question": "합/불 또는 비교 기준이 정의되었는가?", "auto": False},
+    {"key": "reusability", "label": "재현·재사용성", "question": "세팅·결과가 다음 과제에 재사용 가능한가?", "auto": True},
+]
+
+VALIDATION_MAX = len(VALIDATION_ITEMS) * 5  # 40 (하위호환)
 
 
-def verdict_for(total: int) -> str:
-    ratio = total / VALIDATION_MAX if VALIDATION_MAX else 0
+def validation_items_for(mode: str = DEFAULT_MODE) -> List[Dict]:
+    return SIMULATION_VALIDATION_ITEMS if mode == "simulation" else VALIDATION_ITEMS
+
+
+def validation_max_for(mode: str = DEFAULT_MODE) -> int:
+    return len(validation_items_for(mode)) * 5
+
+
+def verdict_for(total: int, mode: str = DEFAULT_MODE) -> str:
+    max_ = validation_max_for(mode)
+    ratio = total / max_ if max_ else 0
+    if mode == "simulation":
+        if ratio >= 0.75:
+            return "해석 계획이 탄탄합니다. 이대로 착수하되 시험 상관성 검증을 계획에 포함하세요."
+        if ratio >= 0.5:
+            return "방향은 맞으나 경계조건·가정·판단기준을 더 다듬어야 합니다."
+        return "아직 계획이 약합니다. 지배 물리현상과 해석방법부터 명확히 하세요."
     if ratio >= 0.75:
         return "자동화/시스템으로 만들 가치가 높습니다. 단, 1차 MVP는 작게 시작하세요."
     if ratio >= 0.5:
@@ -126,8 +162,15 @@ def meta(db=None) -> Dict:
     return {
         "domains": domains(db),
         "role_presets": ROLE_PRESETS,
+        # 하위호환: 기본(발굴) 항목을 그대로 노출
         "validation_items": VALIDATION_ITEMS,
         "validation_max": VALIDATION_MAX,
+        # 모드별 검증 항목 (프론트가 프로젝트 mode 에 맞춰 사용)
+        "modes": MODES,
+        "validation_by_mode": {
+            "discovery": {"items": VALIDATION_ITEMS, "max": len(VALIDATION_ITEMS) * 5},
+            "simulation": {"items": SIMULATION_VALIDATION_ITEMS, "max": len(SIMULATION_VALIDATION_ITEMS) * 5},
+        },
         "time_blocks": DITL_TIME_BLOCKS,
         "style_persona": STYLE_PERSONA,
     }

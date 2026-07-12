@@ -113,10 +113,15 @@ def create_project(name: str, one_liner: str = "", current_problem: str = "") ->
 
 
 @mcp.tool()
-def create_and_fill(name: str, content: str, domain: str = "other") -> dict:
+def create_and_fill(name: str, content: str, domain: str = "other", mode: str = "discovery") -> dict:
     """
     인터뷰/대화 정리 내용으로 '새 프로젝트를 만들면서 전체를 한 번에' 채웁니다.
     발굴 첫 단계(프로젝트가 아직 없을 때)에 가장 편리합니다 — create_project + fill_project 를 한 번에.
+
+    mode:
+      - "discovery"  : 기회 발굴(무엇을 만들지 — 자동화/시스템 가치 판단). 기본값.
+      - "simulation" : 시뮬레이션 계획(이 문제/컨셉을 어떻게 해석할지 — 지배 물리현상,
+                       해석방법, 경계조건, 시험 상관성 등). CAE/해석 계획에 사용.
 
     content 는 fill_project 와 동일한 JSON(idea/personas/pains/features/prfaq).
     반영할 내용이 하나도 없으면 프로젝트가 만들어지지 않습니다(원자적).
@@ -128,7 +133,7 @@ def create_and_fill(name: str, content: str, domain: str = "other") -> dict:
     if not content or not str(content).strip():
         raise RuntimeError("채울 내용(content JSON)이 비어 있습니다.")
     return _post("/wb/projects/create-from-interview",
-                 {"name": name.strip(), "content": content, "domain": domain})
+                 {"name": name.strip(), "content": content, "domain": domain, "mode": mode})
 
 
 @mcp.tool()

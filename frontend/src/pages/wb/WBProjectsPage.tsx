@@ -12,14 +12,15 @@ import {
 } from '../../services/api'
 import { toast } from '../../store/toastStore'
 import { InterviewBridge } from '../../components/wb/InterviewBridge'
-import type { WBProject, WBMeta } from '../../types'
+import type { WBProject, WBMeta, WBMode } from '../../types'
+import { MODE_META } from '../../lib/wbMode'
 
 export default function WBProjectsPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [showForm, setShowForm] = useState(false)
   const [interview, setInterview] = useState(false)
-  const [form, setForm] = useState({ name: '', domain: 'drop_impact', one_liner: '', current_problem: '' })
+  const [form, setForm] = useState({ name: '', mode: 'discovery' as WBMode, domain: 'drop_impact', one_liner: '', current_problem: '' })
 
   // 보관함/검색/필터/정렬
   const [trashed, setTrashed] = useState(false)
@@ -100,6 +101,19 @@ export default function WBProjectsPage() {
               <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
             </div>
             <div className="space-y-4">
+              {/* 프로젝트 렌즈(mode) 선택 */}
+              <div>
+                <label className="label">프로젝트 유형</label>
+                <div className="grid sm:grid-cols-2 gap-2 mt-1.5">
+                  {(['discovery', 'simulation'] as WBMode[]).map((m) => (
+                    <button key={m} type="button" onClick={() => setForm((p) => ({ ...p, mode: m }))}
+                      className={`text-left rounded-xl border p-3 transition-all ${form.mode === m ? 'border-brand-400 bg-brand-50/50 ring-1 ring-brand-200' : 'border-slate-200 hover:border-slate-300'}`}>
+                      <div className="font-semibold text-sm text-slate-800">{MODE_META[m].label}</div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">{MODE_META[m].desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <label className="label">아이디어 이름 *</label>
@@ -192,7 +206,10 @@ export default function WBProjectsPage() {
               className={`card group transition-all ${trashed ? 'opacity-80' : 'cursor-pointer hover:shadow-card-hover'}`}
               onClick={() => { if (!trashed) navigate(`/wb/${p.id}`) }}>
               <div className="flex items-start justify-between mb-2">
-                <span className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 bg-brand-50 px-2.5 py-1 rounded-full">{domainName(p.domain)}</span>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${MODE_META[p.mode]?.badge || MODE_META.discovery.badge}`}>{MODE_META[p.mode]?.short || '발굴'}</span>
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 bg-brand-50 px-2.5 py-1 rounded-full">{domainName(p.domain)}</span>
+                </div>
                 <div className="flex items-center gap-2">
                   {p.origin_mission_id && <span title="WorkCraft 미션에서 승격" className="text-slate-300"><Target className="w-3.5 h-3.5" /></span>}
                   {!trashed && p.status === 'validated' && <CheckCircle2 className="w-4 h-4 text-green-500" />}

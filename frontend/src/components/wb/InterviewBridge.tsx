@@ -8,7 +8,8 @@ import {
   getInterviewPrompt, applyWBAll, getInterviewPromptNew, createFromInterview,
 } from '../../services/api'
 import { toast } from '../../store/toastStore'
-import type { WBMeta } from '../../types'
+import type { WBMeta, WBMode } from '../../types'
+import { MODE_META } from '../../lib/wbMode'
 
 const LLM_LINKS = [
   { name: 'Claude', url: 'https://claude.ai/new' },
@@ -37,6 +38,7 @@ export function InterviewBridge({ pid, version, meta, onClose, onApplied, onCrea
   const createMode = pid === undefined
   const [tab, setTab] = useState<'prompt' | 'paste'>('prompt')
   const [name, setName] = useState('')
+  const [mode, setMode] = useState<WBMode>('discovery')
   const [domain, setDomain] = useState(meta?.domains?.[0]?.key || 'other')
   const [transcript, setTranscript] = useState('')
   const [prompt, setPrompt] = useState('')
@@ -44,13 +46,13 @@ export function InterviewBridge({ pid, version, meta, onClose, onApplied, onCrea
   const [copied, setCopied] = useState(false)
 
   const genMut = useMutation({
-    mutationFn: () => createMode ? getInterviewPromptNew(name, domain, transcript) : getInterviewPrompt(pid!, transcript),
+    mutationFn: () => createMode ? getInterviewPromptNew(name, domain, transcript, mode) : getInterviewPrompt(pid!, transcript),
     onSuccess: (r) => { setPrompt(r.prompt); navigator.clipboard.writeText(r.prompt); setCopied(true); setTimeout(() => setCopied(false), 1600); toast.success('프롬프트를 만들어 복사했어요') },
     onError: () => toast.error('생성 실패'),
   })
 
   const applyMut = useMutation({
-    mutationFn: () => createMode ? createFromInterview(name, pasted, domain) : applyWBAll(pid!, pasted, false, version),
+    mutationFn: () => createMode ? createFromInterview(name, pasted, domain, mode) : applyWBAll(pid!, pasted, false, version),
     onSuccess: (r: any) => {
       if (createMode) {
         toast.success('인터뷰 내용으로 새 프로젝트를 만들었어요')
@@ -98,21 +100,35 @@ export function InterviewBridge({ pid, version, meta, onClose, onApplied, onCrea
               </div>
 
               {createMode && (
-                <div className="grid sm:grid-cols-[1fr_auto] gap-2">
+                <>
                   <div>
-                    <label className="label">프로젝트 이름 *</label>
-                    <input className="input-field mt-1" value={name} onChange={(e) => setName(e.target.value)}
-                      placeholder="예: 낙하 케이스 자동화" />
-                  </div>
-                  {meta && (
-                    <div>
-                      <label className="label">업무 유형</label>
-                      <select className="input-field mt-1" value={domain} onChange={(e) => setDomain(e.target.value)}>
-                        {meta.domains.map((d) => <option key={d.key} value={d.key}>{d.name}</option>)}
-                      </select>
+                    <label className="label">프로젝트 유형</label>
+                    <div className="grid grid-cols-2 gap-2 mt-1">
+                      {(['discovery', 'simulation'] as WBMode[]).map((m) => (
+                        <button key={m} type="button" onClick={() => setMode(m)}
+                          className={`text-left rounded-lg border p-2 transition-all ${mode === m ? 'border-brand-400 bg-brand-50/50 ring-1 ring-brand-200' : 'border-slate-200 hover:border-slate-300'}`}>
+                          <div className="font-semibold text-xs text-slate-800">{MODE_META[m].label}</div>
+                          <div className="text-[10px] text-slate-500 mt-0.5 leading-tight">{MODE_META[m].desc}</div>
+                        </button>
+                      ))}
                     </div>
-                  )}
-                </div>
+                  </div>
+                  <div className="grid sm:grid-cols-[1fr_auto] gap-2">
+                    <div>
+                      <label className="label">프로젝트 이름 *</label>
+                      <input className="input-field mt-1" value={name} onChange={(e) => setName(e.target.value)}
+                        placeholder={mode === 'simulation' ? '예: 신규 힌지 낙하 파손 해석' : '예: 낙하 케이스 자동화'} />
+                    </div>
+                    {meta && (
+                      <div>
+                        <label className="label">업무 유형</label>
+                        <select className="input-field mt-1" value={domain} onChange={(e) => setDomain(e.target.value)}>
+                          {meta.domains.map((d) => <option key={d.key} value={d.key}>{d.name}</option>)}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
 
               <label className="label">인터뷰 / 대화 내용 {createMode ? '' : '(선택 — 비우면 현재 아이디어로 구성)'}</label>

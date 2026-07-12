@@ -80,14 +80,17 @@ def to_markdown(project, personas, pains, prfaq, features, validation) -> str:
             md.append(f"| {f.priority} | {f.name} | {f.reason} |")
         md.append("")
 
-    # Validation
+    # Validation (모드에 맞는 항목·총점)
     if validation and validation.scores:
-        md.append("## 검증 점수\n")
-        for item in wb_data.VALIDATION_ITEMS:
+        mode = getattr(project, "mode", "discovery")
+        items = wb_data.validation_items_for(mode)
+        vmax = wb_data.validation_max_for(mode)
+        md.append("## 검증 점수\n" if mode != "simulation" else "## 시뮬레이션 계획 검증\n")
+        for item in items:
             sc = validation.scores.get(item["key"])
             if sc is not None:
                 md.append(f"- {item['label']}: {sc}/5")
-        md.append(f"\n**총점: {validation.total}/{wb_data.VALIDATION_MAX}** — {validation.verdict}")
+        md.append(f"\n**총점: {validation.total}/{vmax}** — {validation.verdict}")
         if validation.note:
             md.append(f"\n> {validation.note}")
 
