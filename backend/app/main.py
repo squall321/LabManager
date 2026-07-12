@@ -1,8 +1,13 @@
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from .core.database import engine, Base, SessionLocal
+from .core.logging import (
+    setup_logging, RequestLogMiddleware, unhandled_exception_handler,
+)
 from .models import (  # noqa: F401
     user, survey, workcraft, assessment, pulse, agreement, reflection, kudos, decision,
     working_backwards, wb_domain, api_token,
@@ -20,6 +25,12 @@ from .core.config import settings
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    setup_logging()
+    logging.getLogger("labmanager").info(
+        "%s v%s 시작 (backup=%s, log=%s)",
+        settings.APP_NAME, settings.APP_VERSION,
+        settings.AUTO_BACKUP_ENABLED, settings.LOG_LEVEL,
+    )
     # 개발 편의용 자동 테이블 생성 (운영에서는 AUTO_CREATE_ALL=false + Alembic)
     if settings.AUTO_CREATE_ALL:
         Base.metadata.create_all(bind=engine)
@@ -46,11 +57,17 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 요청 접근 로그 (메서드/경로/상태/소요시간)
+app.add_middleware(RequestLogMiddleware)
+
+# 처리되지 않은 예외 → 스택은 로그, 사용자에겐 안전한 500
+app.add_exception_handler(Exception, unhandled_exception_handler)
 
 app.include_router(auth.router, prefix="/api")
 app.include_router(survey_router.router, prefix="/api")

@@ -2,7 +2,9 @@
 DB 백업 서비스 — SQLite 온라인 백업 API 기반.
 관리자 API와 CLI(scripts/backup_db.py)가 공유한다.
 """
+import os
 import sqlite3
+import time
 from datetime import datetime
 from pathlib import Path
 from ..core.config import BASE_DIR, settings
@@ -91,12 +93,36 @@ def _latest_backup_age_hours() -> float | None:
 
 def backup_if_due(interval_hours: int, keep: int) -> dict | None:
     """마지막 백업이 interval_hours 이상 지났으면(또는 없으면) 백업 후 오래된 것 정리.
-    재시작해도 최근 백업 시각을 파일에서 판단하므로 중복 백업하지 않는다."""
+    재시작해도 최근 백업 시각을 파일에서 판단하므로 중복 백업하지 않는다.
+
+    멀티 워커 안전: O_CREAT|O_EXCL 락으로 동시에 여러 프로세스가 백업하지 않게 한다.
+    락을 못 잡으면(다른 워커가 처리 중) 조용히 건너뛴다."""
     if not DB_PATH.exists():
         return None
     age = _latest_backup_age_hours()
     if age is not None and age < interval_hours:
         return None
-    result = create_backup()
-    prune_backups(keep)
-    return result
+
+    BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    lock = BACKUP_DIR / f".{PREFIX}backup.lock"
+    try:
+        fd = os.open(str(lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError:
+        # 오래된(고아) 락은 정리: 60초 이상이면 무시하고 재시도 없이 이번은 건너뜀
+        try:
+            if time.time() - lock.stat().st_mtime > 60:
+                lock.unlink(missing_ok=True)
+        except OSError:
+            pass
+        return None
+    try:
+        # 락을 잡은 뒤 다시 한 번 확인(그 사이 다른 워커가 방금 백업했을 수 있음)
+        age = _latest_backup_age_hours()
+        if age is not None and age < interval_hours:
+            return None
+        result = create_backup()
+        prune_backups(keep)
+        return result
+    finally:
+        os.close(fd)
+        lock.unlink(missing_ok=True)

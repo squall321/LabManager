@@ -34,6 +34,12 @@ def get_current_user(
     user = db.query(User).filter(User.email == email).first()
     if user is None:
         raise credentials_exception
+    # 비활성 계정은 유효한 JWT 를 갖고 있어도 차단 (정지 즉시 반영)
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="비활성화된 계정입니다. 관리자에게 문의하세요.",
+        )
     return user
 
 

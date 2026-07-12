@@ -46,8 +46,20 @@ class Settings(BaseSettings):
     AUTO_BACKUP_INTERVAL_HOURS: int = 24    # 백업 주기(시간)
     AUTO_BACKUP_KEEP: int = 30              # 보관 개수(초과분 자동 정리)
 
+    # 로깅
+    LOG_LEVEL: str = "INFO"                 # DEBUG | INFO | WARNING | ERROR
+    LOG_REQUESTS: bool = True               # 요청 접근 로그(메서드/경로/상태/소요시간)
+
+    # CORS 허용 오리진. 콤마로 구분. 운영에서는 실제 프론트 도메인을 지정.
+    #   예: CORS_ORIGINS=https://lab.example.com,https://www.example.com
+    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000,http://localhost:5175"
+
     APP_NAME: str = "디지털트윈AX랩"
     APP_VERSION: str = "1.0.0"
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
 
     class Config:
         env_file = ".env"
